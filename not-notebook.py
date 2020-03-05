@@ -90,16 +90,27 @@ plot_dataset(extrinsic_dataset, class_position=1)
 
 #%% md
 
-### Dataset intrínseca
-#%_ blablabla
+## Dataset intrínseca
+
+#%_ Hemos escogido el dataset *tae.csv*. Este trata de XXX con los atributos siguientes:
+#%_ - aaa1
+#%_ - aaa2
+#%_ - ...
+
+#%_ Cargamos nuestro dataset (*intrinsic_dataset*):
 
 #%%
 
-# load_dataset()
+dataset_url = 'https://raw.githubusercontent.com/Grupo-MasterAI-ANS/actividad/master/datasets/tae.csv'
+_, intrinsic_dataset = load_dataset(dataset_url, separator=',')
+
+#%% md
+
+#%_ Podemos ver la relación siguiente entre atríbutos:
 
 #%%
 
-# plot_dataset()
+plot_dataset(intrinsic_dataset)
 
 #%% md
 
