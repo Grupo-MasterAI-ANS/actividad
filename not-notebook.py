@@ -1,27 +1,25 @@
-# %% md
+#%% md
 
-# %_ Bloque de introducción
+#%_ Bloque de introducción
 
-# %% md
+#%% md
 
 # Datasets
 ## Preparación
 ### Librerías
 
-# %%
+#%%
 
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-# %% md
+#%% md
 
 ### Función de descarga
-# %_ blablabla
+#%_ blablabla
 
-# %%
+#%%
 
 def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int = None, remove: tuple = None):
     """Load a dataset from a specified url into a pandas DataFrame.
@@ -53,13 +51,13 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
     return classes, dataset
 
 
-# %% md
+#%% md
 
 ### Función de visualización
-# %_ blablabla
-# %_ la idea es que esta función sea parametrizable y que pueda colorear los clusters
+#%_ blablabla
+#%_ la idea es que esta función sea parametrizable y que pueda colorear los clusters
 
-# %%
+#%%
 
 def plot_dataset(dataset: pd.DataFrame, class_position: int = None) -> None:
     # TODO: remove or use the class_position argument.
@@ -67,140 +65,140 @@ def plot_dataset(dataset: pd.DataFrame, class_position: int = None) -> None:
     # sns.pairplot(dataset)
 
 
-# %% md
+#%% md
 
 ## Selección
 
-# %% md
+#%% md
 
 ### Dataset extrínseca
-# %_ lo cilindros están en posición 1 (partiendo de 0)
-# %_ no los he eliminado para que veamos el hue
+#%_ lo cilindros están en posición 1 (partiendo de 0)
+#%_ no los he eliminado para que veamos el hue
 
-# %%
+#%%
 
 dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
 extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, class_position=1, remove=[6, 7])
 
-# %%
+#%%
 
 plot_dataset(extrinsic_dataset, class_position=1)
 
-# %% md
+#%% md
 
-# %_ blablabla
+#%_ blablabla
 
-# %% md
+#%% md
 
 ### Dataset intrínseca
-# %_ blablabla
+#%_ blablabla
 
-# %%
+#%%
 
 # load_dataset()
 
-# %%
+#%%
 
 # plot_dataset()
 
-# %% md
+#%% md
 
-# %_ blablabla
+#%_ blablabla
 
-# %% md
+#%% md
 
 # Análisis dataset extrínseca
 ## Algoritmos
 
-# %% md
+#%% md
 
 ### Algoritmo k-means
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 2
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 3
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 4
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algritmo 5
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ## Comparación algoritmos
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 # Análisis dataset intrínseca¶
 ## Algoritmos
 
-# %% md
+#%% md
 
 ### Algoritmo k-means
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 2
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 3
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 4
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ### Algoritmo 5
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 ## Comparación algoritmos
 
-# %%
+#%%
 
 
-# %% md
+#%% md
 
 # Conclusión
