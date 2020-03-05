@@ -21,7 +21,7 @@ import seaborn as sns
 
 #%%
 
-def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int = None):
+def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int = None, remove: tuple = None):
     """Load a dataset from a specified url into a pandas DataFrame.
 
     :param str dataset_url: an url from archive.ics.uci.edu
@@ -31,8 +31,9 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
     # Load dataset as a pandas DataFrame from a specified url.
     dataset = pd.read_csv(dataset_url, sep=separator, header=None)
 
-    # Remove first column as it can be considered an index.
-    dataset.drop([0], axis=1, inplace=True)
+    # Remove attributes.
+    if remove is not None:
+        dataset.drop(remove, axis=1, inplace=True)
 
     # Extrinsic case, dataset comes with its classes.
     if class_position is not None:
@@ -56,13 +57,12 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
 #%_ blablabla
 #%_ la idea es que esta función sea parametrizable y que pueda colorear los clusters
 
-
 #%%
 
 def plot_dataset(dataset: pd.DataFrame, class_position: int = None) -> None:
     # TODO: remove or use the class_position argument.
-    # sns.pairplot(dataset, hue=class_position)
-    sns.pairplot(dataset)
+    sns.pairplot(dataset, hue=class_position)
+    # sns.pairplot(dataset)
 
 
 #%% md
@@ -72,15 +72,17 @@ def plot_dataset(dataset: pd.DataFrame, class_position: int = None) -> None:
 #%% md
 
 ### Dataset extrínseca
-#%_ blablabla
+#%_ lo cilindros están en posición 1 (partiendo de 0)
+#%_ no los he eliminado para que veamos el hue
 
 #%%
 
-# load_dataset()
+dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
+extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, class_position=1, remove=[6, 7])
 
 #%%
 
-# plot_dataset()
+plot_dataset(extrinsic_dataset, class_position=1)
 
 #%% md
 
