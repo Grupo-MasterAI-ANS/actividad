@@ -1,6 +1,6 @@
 #%% md
 
-#% Bloque de introducción
+#%_ Bloque de introducción
 
 #%% md
 
@@ -21,7 +21,7 @@ from sklearn.cluster import KMeans
 #%% md
 
 ### Función de descarga
-#% blablabla
+#%_ blablabla
 
 
 #%%
@@ -68,8 +68,8 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
 #%% md
 
 ### Función de visualización
-#% blablabla
-#% la idea es que esta función sea parametrizable y que pueda colorear los clusters
+#%_ blablabla
+#%_ la idea es que esta función sea parametrizable y que pueda colorear los clusters
 
 
 #%%
@@ -90,8 +90,8 @@ def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
 
 
 ### Dataset extrínseca
-#% los cilindros están en posición 1 (partiendo de 0)
-#% no los he eliminado para que veamos el hue
+#%_ los cilindros están en posición 1 (partiendo de 0)
+#%_ no los he eliminado para que veamos el hue
 
 #%%
 
@@ -104,18 +104,18 @@ plot_dataset(extrinsic_dataset, extrinsic_classes)
 
 #%% md
 
-#% blablabla
+#%_ blablabla
 
 #%% md
 
 ## Dataset intrínseca
 
-#% Hemos escogido el dataset *tae.csv*. Este trata de XXX con los atributos siguientes:
-#% - aaa1
-#% - aaa2
-#% - ...
+#%_ Hemos escogido el dataset *tae.csv*. Este trata de XXX con los atributos siguientes:
+#%_ - aaa1
+#%_ - aaa2
+#%_ - ...
 
-#% Cargamos nuestro dataset (*intrinsic_dataset*):
+#%_ Cargamos nuestro dataset (*intrinsic_dataset*):
 
 #%%
 
@@ -124,7 +124,7 @@ _, intrinsic_dataset = load_dataset(dataset_url)
 
 #%% md
 
-#% Podemos ver la relación siguiente entre atríbutos:
+#%_ Podemos ver la relación siguiente entre atríbutos:
 
 #%%
 
@@ -133,12 +133,12 @@ plot_dataset(intrinsic_dataset)
 
 #%% md
 
-#% blablabla
+#%_ blablabla
 
 #%% md
 
 # Algoritmos
-#% Preparamos funciones 'herramienta' para cada algoritmo de forma a poder analizarlos.
+#%_ Preparamos funciones 'herramienta' para cada algoritmo de forma a poder analizarlos.
 
 #%% md
 
@@ -146,8 +146,8 @@ plot_dataset(intrinsic_dataset)
 
 #%% md
 
-#% Métrica R cadrado. No usamos directamente la de sklean al esta necesitar la clases reales.
-#% Nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
+#%_ Métrica R cadrado. No usamos directamente la de sklean al esta necesitar la clases reales.
+#%_ Nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
 
 #%%
 
@@ -168,7 +168,7 @@ def r2_score(dataset, prediction, centroids):
 
 #%% md
 
-#% Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de cluters, de forma a escoger el número de clusters óptimo, usando la técnica del codo.
+#%_ Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de cluters, de forma a escoger el número de clusters óptimo, usando la técnica del codo.
 
 #%%
 
@@ -205,7 +205,7 @@ def kmeans_plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10
 
 ### Algoritmo k-means
 #### Selección del número de clusters
-#% Aplicamos el procedimiento del codo
+#%_ Aplicamos el procedimiento del codo
 
 #%%
 
@@ -213,7 +213,7 @@ kmeans_plot_clusters_selection(extrinsic_dataset)
 
 #%% md
 
-#% Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dataset viene con 6 clusters.
+#%_ Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dataset viene con 6 clusters.
 
 #%% md
 
@@ -272,7 +272,7 @@ kmeans_plot_clusters_selection(intrinsic_dataset)
 
 #%% md
 
-#% Según el procedimiento del codo, escogeríamos 7 clusters
+#%_ Según el procedimiento del codo, escogeríamos 7 clusters
 
 #%% md
 
