@@ -10,11 +10,11 @@
 
 #%%
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn import metrics
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
 
@@ -102,23 +102,34 @@ extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, class_position=
 
 plot_dataset(extrinsic_dataset, extrinsic_classes)
 
-
 #%% md
 
 #%_ blablabla
 
 #%% md
 
-### Dataset intrínseca
-#%_ blablabla
+## Dataset intrínseca
+
+#%_ Hemos escogido el dataset *tae.csv*. Este trata de XXX con los atributos siguientes:
+#%_ - aaa1
+#%_ - aaa2
+#%_ - ...
+
+#%_ Cargamos nuestro dataset (*intrinsic_dataset*):
 
 #%%
 
-# load_dataset()
+dataset_url = 'https://raw.githubusercontent.com/Grupo-MasterAI-ANS/actividad/master/datasets/tae.csv'
+_, intrinsic_dataset = load_dataset(dataset_url, separator=',')
+
+#%% md
+
+#%_ Podemos ver la relación siguiente entre atríbutos:
 
 #%%
 
-# plot_dataset()
+plot_dataset(intrinsic_dataset)
+
 
 #%% md
 
