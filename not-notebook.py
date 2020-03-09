@@ -128,11 +128,13 @@ plot_dataset(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 2
 
 #%%
+
 
 
 #%% md
@@ -142,11 +144,13 @@ plot_dataset(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 4
 
 #%%
+
 
 
 #%% md
@@ -156,11 +160,13 @@ plot_dataset(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ## Comparación algoritmos
 
 #%%
+
 
 
 #%% md
@@ -175,11 +181,13 @@ plot_dataset(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 2
 
 #%%
+
 
 
 #%% md
@@ -189,11 +197,13 @@ plot_dataset(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 4
 
 #%%
+
 
 
 #%% md
@@ -203,11 +213,13 @@ plot_dataset(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ## Comparación algoritmos
 
 #%%
+
 
 
 #%% md
