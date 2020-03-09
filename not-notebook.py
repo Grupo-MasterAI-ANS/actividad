@@ -222,11 +222,13 @@ kmeans_plot_clusters_selection(extrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 2
 
 #%%
+
 
 
 #%% md
@@ -236,11 +238,13 @@ kmeans_plot_clusters_selection(extrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 4
 
 #%%
+
 
 
 #%% md
@@ -250,11 +254,13 @@ kmeans_plot_clusters_selection(extrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ## Comparación algoritmos
 
 #%%
+
 
 
 #%% md
@@ -281,11 +287,13 @@ kmeans_plot_clusters_selection(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 2
 
 #%%
+
 
 
 #%% md
@@ -295,11 +303,13 @@ kmeans_plot_clusters_selection(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ### Algoritmo 4
 
 #%%
+
 
 
 #%% md
@@ -309,11 +319,13 @@ kmeans_plot_clusters_selection(intrinsic_dataset)
 #%%
 
 
+
 #%% md
 
 ## Comparación algoritmos
 
 #%%
+
 
 
 #%% md
