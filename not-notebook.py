@@ -12,7 +12,7 @@
 
 import pandas as pd
 import seaborn as sns
-
+import numpy as np
 
 #%% md
 
@@ -21,7 +21,8 @@ import seaborn as sns
 
 #%%
 
-def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int = None, remove: tuple = None):
+def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int = None, remove: tuple = None,
+                 limpiarNA: bool = True, describe: bool = False):
     """Load a dataset from a specified url into a pandas DataFrame.
 
     :param str dataset_url: an url from archive.ics.uci.edu
@@ -31,18 +32,27 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
     # Load dataset as a pandas DataFrame from a specified url.
     dataset = pd.read_csv(dataset_url, sep=separator, header=None)
 
-    # Remove attributes.
-    if remove is not None:
-        dataset.drop(remove, axis=1, inplace=True)
+    # Limpieza de datos
+    # El dataset de extrínseco tiene un valor no deseado en una instancia, en la potencia, "?"
+    dataset.replace(to_replace="?", value=np.nan, inplace=True)
+    #  Eliminamos las líneas con valores vacíos
+    if limpiarNA:
+        dataset.dropna(inplace=True)
+
+    # Antes de recortar el dataset, lo mostramos
+    if describe:
+        print(dataset.describe())
 
     # Extrinsic case, dataset comes with its classes.
     if class_position is not None:
         # Extract classes.
         classes = dataset.iloc[:, class_position]
-        # TODO: aún no sé si dejar o eliminar las clases del dataset,
-        # mas que nada para el hue de seaborn a la hora de presentar los datos.
         # Remove classes from the dataset.
-        # dataset = dataset.drop([class_position,], axis=1)
+        dataset = dataset.drop([class_position, ], axis=1)
+
+    # Remove attributes.
+    if remove is not None:
+        dataset.drop(remove, axis=1, inplace=True)
 
     # Intrinsic case, dataset has no classes.
     else:
@@ -59,10 +69,12 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
 
 #%%
 
-def plot_dataset(dataset: pd.DataFrame, class_position: int = None) -> None:
-    # TODO: remove or use the class_position argument.
-    sns.pairplot(dataset, hue=class_position)
-    # sns.pairplot(dataset)
+def plot_dataset(atributos: pd.DataFrame, clase: pd.DataFrame=None) -> None:
+    if clase is not None:
+        dataset = pd.concat([clase,atributos], axis=1)
+    else:
+        dataset = atributos
+    sns.pairplot(dataset, hue=1)
 
 
 #%% md
@@ -78,15 +90,44 @@ def plot_dataset(dataset: pd.DataFrame, class_position: int = None) -> None:
 #%%
 
 dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
-extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, class_position=1, remove=[6, 7])
+# print("El dataset mpg:") # Si se activa, añadir parámetro describe=True a este load_dataset
+extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, class_position=1, remove=[0, 4, 5, 6, 7])
 
 #%%
 
-plot_dataset(extrinsic_dataset, class_position=1)
+plot_dataset(extrinsic_dataset,extrinsic_classes)
 
 #%% md
 
-#%_ blablabla
+#%_ El origen de este dataset se remonta a datos usados en 1983 por la <i>American Statistical
+#% Association Exposition</i> y que se conservan en la Universidad de Carnegie Mellon, al que le
+#% faltan 8 instancias que se eliminaron para homogeneizar el dataset, ya que carecían del campo mpg.
+
+#% El dataset consta de:
+print(extrinsic_dataset.shape)
+#% - 398 instancias
+#% - 8 atributos, que son:
+#%     · mpg (millas por galón de combustible): de tipo continuo.
+#%     · cylinders (cilindros): discreto multi evaluado.
+#%     · displacement (cilindrada): continuo.
+#%     · horsepower (caballos de potencia): continuo.
+#%     · weight (peso): continuo
+#%     · acceleration (aceleración): continuo
+#%     · model-year (año del modelo): discrto multi evaluado.
+#%     · origin (origen): discreto multi evaluado.
+#%     · car name (nombre del coche): cadena (único para cada instancia)
+
+#%  Para el estudio que nos ocupa vamos a predecir el número de cilindros basándonos en la cilindrada y la potencia.
+#%  Se descartan el resto de valores para mantener baja la dimensión del vector descriptor y simplificar así los
+#%  cálculos.
+#%  Los datos vienen casi listos para trabajar con ellos. No se detectan campos vacíos:
+print(extrinsic_dataset.isnull().any())
+#%  Sin embargo, en la potencia hay un valor anómalo, un "?" usado donde se desconocía el dato, por lo que se
+#%  ha incorporado a la función de carga de datos un filtro para eliminarlo, ajustable por parámetro (limpiarNA)
+#%
+#%  Vamos a observar la distribución de nuestra clase:
+sns.distplot(extrinsic_classes)
+
 
 #%% md
 
@@ -110,7 +151,7 @@ _, intrinsic_dataset = load_dataset(dataset_url, separator=',')
 
 #%%
 
-plot_dataset(intrinsic_dataset)
+plot_dataset(atributos = intrinsic_dataset)
 
 #%% md
 
