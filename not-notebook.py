@@ -83,7 +83,7 @@ la idea es que esta función sea parametrizable y que pueda colorear los cluster
 
 def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
     if classes is not None:
-        dataset['classes'] = classes
+        dataset['classes'] = classes.astype(str)
         sns.pairplot(dataset, hue='classes')
     else:
         sns.pairplot(dataset)
