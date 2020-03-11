@@ -83,6 +83,8 @@ la idea es que esta función sea parametrizable y que pueda colorear los cluster
 
 def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
     if classes is not None:
+        # Clone dataset to avoid modifying the original one.
+        dataset = dataset.copy()
         dataset['classes'] = classes
         sns.pairplot(dataset, hue='classes')
     else:
@@ -122,10 +124,10 @@ blablabla
 
 """  #    
 ## Dataset intrínseca
-Hemos escogido el dataset *tae.csv*. Este trata de XXX con los atributos siguientes:
-- aaa1
-- aaa2
-- ...
+El dataset intrínseca **Aggregations** está generado de manera artificial por: *A. Gionis, H. Mannila, and P. Tsaparas, Clustering aggregation. ACM Transactions on Knowledge Discovery from Data (TKDD), 2007*
+
+
+Este dataset está compuesto por 788 observaciones de 2 variables que abarcan un amplio rango numérico. En el conjunto de datos existen entre 5 a 7 grupos que se distribuyen en zonas particulares del rango de valores de las variables.
 
 
 Cargamos nuestro dataset (*intrinsic_dataset*):
@@ -135,7 +137,7 @@ Cargamos nuestro dataset (*intrinsic_dataset*):
 #%%
 
 dataset_url = 'http://cs.joensuu.fi/sipu/datasets/Aggregation.txt'
-_, intrinsic_dataset = load_dataset(dataset_url)
+_, intrinsic_dataset = load_dataset(dataset_url, remove=[2])
 
 #%% md
 
@@ -238,7 +240,7 @@ def kmeans_plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10
 ### Algoritmo k-means
 #### Selección del número de clusters
 
-Aplicamos el procedimiento del codo
+A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
 
 """  #
 
@@ -308,7 +310,13 @@ Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dat
 
 #%% md
 
+"""  #    
 ### Algoritmo k-means
+#### Selección del número de clusters
+
+A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
+
+"""  #
 
 #%%
 
@@ -317,7 +325,7 @@ kmeans_plot_clusters_selection(intrinsic_dataset)
 #%% md
 
 """  #    
-Según el procedimiento del codo, escogeríamos 7 clusters
+Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters
 
 """  #
 
@@ -327,7 +335,11 @@ Según el procedimiento del codo, escogeríamos 7 clusters
 
 #%%
 
+# Ejecutamos el algoritmo para 5 clusters y obtenemos las etiquetas y los centroids
+kmeans = KMeans(n_clusters=6).fit(intrinsic_dataset)
+intrinsic_prediction = kmeans.predict(intrinsic_dataset)
 
+plot_dataset(intrinsic_dataset, intrinsic_prediction)
 
 #%% md
 
