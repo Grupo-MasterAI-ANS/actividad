@@ -85,7 +85,7 @@ def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
     if classes is not None:
         # Clone dataset to avoid modifying the original one.
         dataset = dataset.copy()
-        dataset['classes'] = classes
+        dataset['classes'] = classes.astype(str)
         sns.pairplot(dataset, hue='classes')
     else:
         sns.pairplot(dataset)
