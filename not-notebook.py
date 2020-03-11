@@ -23,10 +23,12 @@ from sklearn.cluster import KMeans
 #%% md
 
 """  #    
-### Función de descarga
-blablabla
+### Descarga
+Preparamos una función genérica de descarga de los datasets y de su preparación.     
+Esta nos permite escoger los atributos que usaremos asi como extraer a un variable aparte las clases en caso de estar disponibles.
 
 """  #
+
 
 #%%
 
@@ -72,9 +74,9 @@ def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int =
 #%% md
 
 """  #    
-### Función de visualización
-blablabla    
-la idea es que esta función sea parametrizable y que pueda colorear los clusters
+### Visualización
+Usaremos una función común para presentar los datos, tanto como si están clasificados o no.    
+También, en caso de usar más de dos atributos del dataset, usaremos el *pairplot* de seaborn para presentar los atributos de dos en dos.
 
 """  #
 
@@ -82,14 +84,267 @@ la idea es que esta función sea parametrizable y que pueda colorear los cluster
 #%%
 
 def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
-    if classes is not None:
-        # Clone dataset to avoid modifying the original one.
-        dataset = dataset.copy()
-        dataset['classes'] = classes.astype(str)
-        sns.pairplot(dataset, hue='classes')
-    else:
-        sns.pairplot(dataset)
+    # For bidimentionnal datasets, use a simple plot.
+    if len(dataset) == 2:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.scatter(dataset.iloc[:, 0], dataset.iloc[:, 1], c=classes)
 
+    # For extra-dimentionnal datasets, compare attribrutes.
+    else:
+        if classes is not None:
+            # Clone dataset to avoid modifying the original one.
+            dataset = dataset.copy()
+            dataset['classes'] = classes.astype(str)
+            sns.pairplot(dataset, hue='classes')
+        else:
+            sns.pairplot(dataset)
+
+
+#%% md
+
+## Métricas
+### Métricas extrínsecas
+
+#%%
+
+def matriz_confusion(cat_real, cat_pred):
+    cats = np.unique(cat_real)
+    clusts = np.unique(cat_pred)
+    mat = np.array([[np.sum(np.logical_and(cat_real == cats[i], cat_pred == clusts[j]))
+                     for j in np.arange(clusts.size)]
+                    for i in np.arange(cats.size)])
+    return (mat)
+
+
+#%%
+
+def medida_error(mat):
+    assign = np.sum([np.max(mat[l, :]) for l in np.arange(mat.shape[0])])
+    return 1 - assign / float(np.sum(mat))
+
+
+def medida_precision(mat, l, k):
+    return mat[l, k] / sum(mat[:, k])
+
+
+def medida_recall(mat, l, k):
+    return mat[l, k] / sum(mat[l, :])
+
+
+def medida_pureza(mat):
+    totales = np.sum(mat, axis=0) / float(np.sum(mat))
+    return np.sum([
+        totales[k] * np.max(mat[:, k] / float(np.sum(mat[:, k])))
+        for k in np.arange(mat.shape[1])
+    ])
+
+
+#%%
+
+def medida_f1_especifica(mat, l, k):
+    prec = medida_precision(mat, l, k)
+    rec = medida_recall(mat, l, k)
+    if (prec + rec) == 0:
+        return 0
+    else:
+        return 2 * prec * rec / (prec + rec)
+
+
+def medida_f1(mat):
+    totales = np.sum(mat, axis=1) / float(np.sum(mat))
+    assign = np.sum([
+        totales[l] * np.max([
+            medida_f1_especifica(mat, l, k)
+            for k in np.arange(mat.shape[1])
+        ])
+        for l in np.arange(mat.shape[0])
+    ])
+    return assign
+
+
+#%%
+
+def medida_entropia(mat):
+    totales = np.sum(mat, axis=0) / float(np.sum(mat))
+    relMat = mat / np.sum(mat, axis=0)
+    logRelMat = relMat.copy()
+    logRelMat[logRelMat == 0] = 0.0001  # Evita el logaritmo de 0. Inofensivo pues luego desaparece al multiplicar por 0
+    logRelMat = np.log(logRelMat)
+    return -np.sum([
+        totales[k] * np.sum([
+            relMat[l, k] * logRelMat[l, k]
+            for l in np.arange(mat.shape[0])
+        ])
+        for k in np.arange(mat.shape[1])
+    ])
+
+
+#%%
+
+def medida_informacion_mutua(mat):
+    relMat = mat / float(np.sum(mat))
+    logRelMat = mat.copy()
+    logRelMat = logRelMat / np.sum(mat, 0, keepdims=True)
+    logRelMat = logRelMat / np.sum(mat, 1, keepdims=True)
+    logRelMat[
+        logRelMat == 0] = 0.000001  # Evita el logaritmo de 0. Inofensivo pues luego desaparece al multiplicar por 0
+    logRelMat = np.log(np.sum(mat) * logRelMat)
+    return np.sum([
+        np.sum([
+            relMat[l, k] * logRelMat[l, k]
+            for l in np.arange(mat.shape[0])
+        ])
+        for k in np.arange(mat.shape[1])
+    ])
+
+
+#%% md
+
+####  Agrupación métricas extrínsecas
+
+#%%
+
+def extrinsic_metrics(real_classes, predicted_classes):
+    confusion_matrix = matriz_confusion(real_classes, predicted_classes)
+
+    return {
+        'error': medida_error(confusion_matrix),
+        'purity': medida_pureza(confusion_matrix),
+        'f1': medida_f1(confusion_matrix),
+        'entroy': medida_entropia(confusion_matrix),
+        'mutual_information': medida_informacion_mutua(confusion_matrix)
+    }
+
+
+#%% md
+
+### Métricas intrínsecas
+
+#%%
+
+def medida_RMSSTD(X, Xyp, cXs):
+    labels = np.unique(Xyp)
+    num = np.sum([np.sum(np.sum(X[Xyp == labels[k], :] - cXs[labels[k], :], 1) ** 2) for k in np.arange(labels.size)])
+    den = X.shape[1] * np.sum([np.sum(Xyp == labels[k]) - 1 for k in np.arange(labels.size)])
+
+    return np.sqrt(num / den)
+
+
+#%%
+
+def medida_R_cuadrado(X, Xyp, cXs):
+    cXglob = np.mean(X, axis=0)
+    labels = np.sort(np.unique(Xyp))
+    sumTotal = np.sum(np.sum(X - cXglob, 1) ** 2)
+    interior = np.sum(
+        [np.sum(np.sum(X[Xyp == labels[k], :] - cXs[labels[k], :], 1) ** 2) for k in np.arange(labels.size)])
+
+    return 1 - interior / sumTotal
+
+
+#%%
+
+def distancia_euclidiana(x, y):
+    return np.sqrt(np.sum((x - y) ** 2))
+
+
+def matriz_distancias(X, distancia):
+    mD = np.zeros((X.shape[0], X.shape[0]))
+    for pair in it.product(np.arange(X.shape[0]), repeat=2):
+        mD[pair] = distancia(X[pair[0], :], X[pair[1], :])
+    return mD
+
+
+def calcular_matriz_a(X, Xyp, mD):
+    labels = np.sort(np.unique(Xyp))
+    factores = 1.0 / (np.array([np.sum(Xyp == labels[k]) for k in np.arange(labels.size)]) - 1)
+    aX = np.zeros(X.shape[0])
+    for i in np.arange(X.shape[0]):
+        k = Xyp[i]
+        aX[i] = factores[k] * np.sum([mD[i, ip]
+                                      for ip in np.arange(X.shape[0])[Xyp == labels[k]]])
+    return (aX)
+
+
+def calcular_matriz_b(X, Xyp, mD):
+    labels = np.sort(np.unique(Xyp))
+    factores = 1.0 / np.array([np.sum(Xyp == labels[k]) for k in np.arange(labels.size)])
+    bX = np.zeros(X.shape[0])
+    for i in np.arange(X.shape[0]):
+        k = Xyp[i]
+        ran = np.arange(labels.size)
+        ran = ran[np.arange(labels.size) != k]
+        res = np.array([factores[h] * np.sum([mD[i, ip]
+                                              for ip in np.arange(X.shape[0])[Xyp == labels[h]]])
+                        for h in ran])
+        bX[i] = np.min(res)
+    return (bX)
+
+
+def medida_silueta(X, Xyp, distancia):
+    mD = matriz_distancias(X, distancia)
+
+    A = calcular_matriz_a(X, Xyp, mD)
+    B = calcular_matriz_b(X, Xyp, mD)
+    impl = np.subtract(B, A) / np.maximum(A, B)
+
+    return np.mean(impl)
+
+
+#%%
+
+def medida_calinski_harabasz(X, Xyp, cXs, distancia):
+    cXglob = np.mean(X, axis=0)
+    labels = np.sort(np.unique(Xyp))
+    factores = np.array([np.sum(Xyp == labels[k]) for k in np.arange(labels.size)])
+
+    num = (X.shape[0] - labels.size) * np.sum([factores[k] * distancia(cXs[k, :], cXglob) ** 2
+                                               for k in np.arange(cXs.shape[0])])
+    den = (labels.size - 1) * np.sum([np.sum([distancia(X[i, :], cXs[k, :]) ** 2
+                                              for i in np.arange(X.shape[0])[Xyp == labels[k]]])
+                                      for k in np.arange(cXs.shape[0])])
+    return num / den
+
+
+#%%
+
+def medida_I(X, Xyp, cXs, distancia, p=1):
+    cXglob = np.mean(X, axis=0)
+    labels = np.sort(np.unique(Xyp))
+    maxDcs = np.max(matriz_distancias(cXs, distancia))
+
+    num = np.sum([distancia(X[i, :], cXglob) for i in np.arange(X.shape[0])])
+
+    den = labels.size * np.sum([
+        np.sum([
+            distancia(X[i, :], cXs[k, :])
+            for i in np.arange(X.shape[0])[Xyp == labels[k]]
+        ])
+        for k in np.arange(cXs.shape[0])
+    ])
+
+    return (num / den * maxDcs) ** p
+
+
+#%%
+
+def medida_davies_bouldin(X, Xyp, cXs, distancia):
+    labels = np.sort(np.unique(Xyp))
+    mDcs = matriz_distancias(cXs, distancia)
+    np.fill_diagonal(mDcs, np.Infinity)
+
+    vals = np.array([1.0 / np.sum(Xyp == labels[k]) * np.sum([distancia(X[i, :], cXs[k, :])
+                                                              for i in np.arange(X.shape[0])[Xyp == labels[k]]])
+                     for k in np.arange(cXs.shape[0])])
+    res = 1.0 / labels.size * np.sum([np.max([(vals[k] + vals[kp]) / mDcs[k, kp]
+                                              for kp in np.arange(labels.size)])
+                                      for k in np.arange(labels.size)])
+    return res
+
+
+#%% md
+
+####  Agrupación métricas intrínsecas
 
 #%% md
 
@@ -142,7 +397,7 @@ _, intrinsic_dataset = load_dataset(dataset_url, remove=[2])
 #%% md
 
 """  #    
-Podemos ver la relación siguiente entre atríbutos:
+Visualizamos el dataset en 2-D.
 
 """  #
 
@@ -153,7 +408,7 @@ plot_dataset(intrinsic_dataset)
 #%% md
 
 """  #    
-blablabla
+Destacamos que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #
 
@@ -251,7 +506,8 @@ kmeans_plot_clusters_selection(extrinsic_dataset)
 #%% md
 
 """  #    
-Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dataset viene con 6 clusters.
+Vemos un "codo" pronunciando con 4 clusters, pero el ancho de silueta es "mínimo" a partir de 6 clusters.     
+Escogemos 5 clusters como punto intermedio.
 
 """  #
 
@@ -261,14 +517,24 @@ Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dat
 
 #%%
 
+kmeans = KMeans(n_clusters=5).fit(extrinsic_dataset)
+extrinsic_kmeans_prediction = kmeans.predict(extrinsic_dataset)
 
+plot_dataset(extrinsic_dataset, extrinsic_kmeans_prediction)
+
+#%% md
+
+#### Métricas de k-means
+
+#%%
+
+#display(extrinsic_metrics(extrinsic_classes, extrinsic_kmeans_prediction))
 
 #%% md
 
 ### Algoritmo 2
 
 #%%
-
 
 
 #%% md
@@ -278,13 +544,11 @@ Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dat
 #%%
 
 
-
 #%% md
 
 ### Algoritmo 4
 
 #%%
-
 
 
 #%% md
@@ -294,13 +558,11 @@ Según esta técnica, sería recomendable usar entre 5 y 6 clusters. Nuestro dat
 #%%
 
 
-
 #%% md
 
 ## Comparación algoritmos
 
 #%%
-
 
 
 #%% md
@@ -331,22 +593,32 @@ Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters
 
 #%% md
 
+"""  #
 #### Ejecución del algoritmo
+Ejecutamos la predicción de k-means con 5 clusters y visualizamos la agrupación generada.
+
+
+"""  #
 
 #%%
 
-# Ejecutamos el algoritmo para 5 clusters y obtenemos las etiquetas y los centroids
-kmeans = KMeans(n_clusters=6).fit(intrinsic_dataset)
-intrinsic_prediction = kmeans.predict(intrinsic_dataset)
+kmeans = KMeans(n_clusters=5).fit(intrinsic_dataset)
+prediction = kmeans.predict(intrinsic_dataset)
 
-plot_dataset(intrinsic_dataset, intrinsic_prediction)
+plot_dataset(intrinsic_dataset, prediction)
+
+#%% md
+
+"""  #    
+Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han quedado a medias.
+
+"""  #
 
 #%% md
 
 ### Algoritmo 2
 
 #%%
-
 
 
 #%% md
@@ -356,13 +628,11 @@ plot_dataset(intrinsic_dataset, intrinsic_prediction)
 #%%
 
 
-
 #%% md
 
 ### Algoritmo 4
 
 #%%
-
 
 
 #%% md
@@ -372,13 +642,11 @@ plot_dataset(intrinsic_dataset, intrinsic_prediction)
 #%%
 
 
-
 #%% md
 
 ## Comparación algoritmos
 
 #%%
-
 
 
 #%% md
