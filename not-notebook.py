@@ -14,13 +14,13 @@ Bloque de introducción
 #%%
 
 import itertools as it
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn import metrics
 from sklearn.cluster import KMeans
+from scipy.cluster.hierarchy import linkage, fcluster, cut_tree, centroid
 
 #%% md
 
@@ -188,28 +188,14 @@ def medida_entropia(mat):
     ])
 
 
-#%%
-
-def medida_informacion_mutua(mat):
-    relMat = mat / float(np.sum(mat))
-    logRelMat = mat.copy()
-    logRelMat = logRelMat / np.sum(mat, 0, keepdims=True)
-    logRelMat = logRelMat / np.sum(mat, 1, keepdims=True)
-    logRelMat[
-        logRelMat == 0] = 0.000001  # Evita el logaritmo de 0. Inofensivo pues luego desaparece al multiplicar por 0
-    logRelMat = np.log(np.sum(mat) * logRelMat)
-    return np.sum([
-        np.sum([
-            relMat[l, k] * logRelMat[l, k]
-            for l in np.arange(mat.shape[0])
-        ])
-        for k in np.arange(mat.shape[1])
-    ])
-
-
 #%% md
 
+"""  #     
 ####  Agrupación métricas extrínsecas
+La función a continuación nos permite generar un diccionario con todas las métricas intrínsecas y poder compararlas entre algoritmos.
+
+"""  #
+
 
 #%%
 
@@ -217,38 +203,57 @@ def calculate_extrinsic_metrics(real_classes, predicted_classes):
     confusion_matrix = matriz_confusion(real_classes, predicted_classes)
 
     return {
-        'error': medida_error(confusion_matrix),
-        'purity': medida_pureza(confusion_matrix),
-        'f1': medida_f1(confusion_matrix),
-        'entropy': medida_entropia(confusion_matrix),
-        'mutual_information': medida_informacion_mutua(confusion_matrix)
+        'Error': medida_error(confusion_matrix),
+        'Pureza': medida_pureza(confusion_matrix),
+        'F1': medida_f1(confusion_matrix),
+        'Entropía': medida_entropia(confusion_matrix),
+        'Información mútua': metrics.mutual_info_score(real_classes, predicted_classes)
     }
 
 
 #%% md
 
+"""  #    
 ### Métricas intrínsecas
+Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o por lo menso en sklearn.
 
-#%%
-
-def medida_RMSSTD(X, Xyp, cXs):
-    labels = np.unique(Xyp)
-    num = np.sum([np.sum(np.sum(X[Xyp == labels[k], :] - cXs[labels[k], :], 1) ** 2) for k in np.arange(labels.size)])
-    den = X.shape[1] * np.sum([np.sum(Xyp == labels[k]) - 1 for k in np.arange(labels.size)])
-
-    return np.sqrt(num / den)
+"""  #
 
 
 #%%
 
-def medida_R_cuadrado(X, Xyp, cXs):
-    cXglob = np.mean(X, axis=0)
-    labels = np.sort(np.unique(Xyp))
-    sumTotal = np.sum(np.sum(X - cXglob, 1) ** 2)
-    interior = np.sum(
-        [np.sum(np.sum(X[Xyp == labels[k], :] - cXs[labels[k], :], 1) ** 2) for k in np.arange(labels.size)])
+def RMSSTD_score(dataset, prediction, centers):
+    # Extract all individual predicted classes.
+    labels = np.unique(prediction)
 
-    return 1 - interior / sumTotal
+    numerator = np.sum([
+        np.sum(np.sum(dataset[prediction == label] - centers[label], axis=1) ** 2)
+        for label in labels
+    ])
+
+    denominator = dataset.shape[1] * np.sum([
+        np.sum(prediction == label) - 1
+        for label in labels
+    ])
+
+    return np.sqrt(numerator / denominator)
+
+
+#%%
+
+def r2_score(dataset, prediction, centroids):
+    """
+    An intrinsic R² score metric, as sklearn one is extrinsic only.
+    """
+    attributes_mean = np.mean(dataset, axis=0)
+    labels = np.sort(np.unique(prediction))
+    numerator = np.sum([
+        np.sum(np.sum(dataset[prediction == label] - centroids[label], axis=1) ** 2)
+        for label in labels
+    ])
+    denominator = np.sum(np.sum(dataset - attributes_mean, 1) ** 2)
+
+    return 1 - numerator / denominator
 
 
 #%%
@@ -257,103 +262,52 @@ def distancia_euclidiana(x, y):
     return np.sqrt(np.sum((x - y) ** 2))
 
 
-def matriz_distancias(X, distancia):
+def distance_matrix(X, distancia):
     mD = np.zeros((X.shape[0], X.shape[0]))
     for pair in it.product(np.arange(X.shape[0]), repeat=2):
         mD[pair] = distancia(X[pair[0], :], X[pair[1], :])
     return mD
 
 
-def calcular_matriz_a(X, Xyp, mD):
-    labels = np.sort(np.unique(Xyp))
-    factores = 1.0 / (np.array([np.sum(Xyp == labels[k]) for k in np.arange(labels.size)]) - 1)
-    aX = np.zeros(X.shape[0])
-    for i in np.arange(X.shape[0]):
-        k = Xyp[i]
-        aX[i] = factores[k] * np.sum([mD[i, ip]
-                                      for ip in np.arange(X.shape[0])[Xyp == labels[k]]])
-    return (aX)
+def medida_I(dataset, prediction, centers, distance_function, p=1):
+    attributes_mean = np.mean(dataset, axis=0)
+    labels = np.sort(np.unique(prediction))
+    distance_max = np.max(distance_matrix(centers, distance_function))
 
+    num = np.sum([distance_function(instance, attributes_mean) for instance in dataset.values])
 
-def calcular_matriz_b(X, Xyp, mD):
-    labels = np.sort(np.unique(Xyp))
-    factores = 1.0 / np.array([np.sum(Xyp == labels[k]) for k in np.arange(labels.size)])
-    bX = np.zeros(X.shape[0])
-    for i in np.arange(X.shape[0]):
-        k = Xyp[i]
-        ran = np.arange(labels.size)
-        ran = ran[np.arange(labels.size) != k]
-        res = np.array([factores[h] * np.sum([mD[i, ip]
-                                              for ip in np.arange(X.shape[0])[Xyp == labels[h]]])
-                        for h in ran])
-        bX[i] = np.min(res)
-    return (bX)
-
-
-def medida_silueta(X, Xyp, distancia):
-    mD = matriz_distancias(X, distancia)
-
-    A = calcular_matriz_a(X, Xyp, mD)
-    B = calcular_matriz_b(X, Xyp, mD)
-    impl = np.subtract(B, A) / np.maximum(A, B)
-
-    return np.mean(impl)
-
-
-#%%
-
-def medida_calinski_harabasz(X, Xyp, cXs, distancia):
-    cXglob = np.mean(X, axis=0)
-    labels = np.sort(np.unique(Xyp))
-    factores = np.array([np.sum(Xyp == labels[k]) for k in np.arange(labels.size)])
-
-    num = (X.shape[0] - labels.size) * np.sum([factores[k] * distancia(cXs[k, :], cXglob) ** 2
-                                               for k in np.arange(cXs.shape[0])])
-    den = (labels.size - 1) * np.sum([np.sum([distancia(X[i, :], cXs[k, :]) ** 2
-                                              for i in np.arange(X.shape[0])[Xyp == labels[k]]])
-                                      for k in np.arange(cXs.shape[0])])
-    return num / den
-
-
-#%%
-
-def medida_I(X, Xyp, cXs, distancia, p=1):
-    cXglob = np.mean(X, axis=0)
-    labels = np.sort(np.unique(Xyp))
-    maxDcs = np.max(matriz_distancias(cXs, distancia))
-
-    num = np.sum([distancia(X[i, :], cXglob) for i in np.arange(X.shape[0])])
-
-    den = labels.size * np.sum([
+    den = len(labels) * np.sum([
         np.sum([
-            distancia(X[i, :], cXs[k, :])
-            for i in np.arange(X.shape[0])[Xyp == labels[k]]
+            distance_function(dataset.iloc[i], centers[k])
+            for i in np.arange(dataset.shape[0])[prediction == labels[k]]
         ])
-        for k in np.arange(cXs.shape[0])
+        for k in np.arange(centers.shape[0])
     ])
 
-    return (num / den * maxDcs) ** p
-
-
-#%%
-
-def medida_davies_bouldin(X, Xyp, cXs, distancia):
-    labels = np.sort(np.unique(Xyp))
-    mDcs = matriz_distancias(cXs, distancia)
-    np.fill_diagonal(mDcs, np.Infinity)
-
-    vals = np.array([1.0 / np.sum(Xyp == labels[k]) * np.sum([distancia(X[i, :], cXs[k, :])
-                                                              for i in np.arange(X.shape[0])[Xyp == labels[k]]])
-                     for k in np.arange(cXs.shape[0])])
-    res = 1.0 / labels.size * np.sum([np.max([(vals[k] + vals[kp]) / mDcs[k, kp]
-                                              for kp in np.arange(labels.size)])
-                                      for k in np.arange(labels.size)])
-    return res
+    return (num / den * distance_max) ** p
 
 
 #%% md
 
+"""  #    
 ####  Agrupación métricas intrínsecas
+La función a continuación nos permite generar un diccionario con todas las métricas intrínsecas y poder compararlas entre algoritmos.
+
+"""  #
+
+
+#%%
+
+def calculate_intrinsic_metrics(dataset, model, distancia):
+    return {
+        'RMSSTD': RMSSTD_score(dataset, model['prediction'], model['centers']),
+        'R²': r2_score(dataset, model['prediction'], model['centers']),
+        'Silueta': metrics.silhouette_score(dataset, model['prediction']),
+        'Calinski Harabasz': metrics.calinski_harabasz_score(dataset, model['prediction']),
+        'Medida I': medida_I(dataset, model['prediction'], model['centers'], distancia),
+        'Davies Bouldin': metrics.davies_bouldin_score(dataset, model['prediction'])
+    }
+
 
 #%% md
 
@@ -395,7 +349,7 @@ def medida_davies_bouldin(X, Xyp, cXs, distancia):
 
 # Cargamos el dataset.
 dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
-#attributes = {0: 'mpg', 2: 'displacement', 3: 'horsepower', 4: 'weight', 5: 'acceleration'}
+# attributes = {0: 'mpg', 2: 'displacement', 3: 'horsepower', 4: 'weight', 5: 'acceleration'}
 attributes = {3: 'horsepower', 5: 'acceleration'}
 extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, attributes, class_position=1)
 
@@ -475,24 +429,6 @@ Nos permite valorar el ratio de distancia intraclúster con respecto a la distan
 
 """  #
 
-
-#%%
-
-def r2_score(dataset, prediction, centroids):
-    """
-    An intrinsic R² score metric, as sklearn one is extrinsic only.
-    """
-    attributes_mean = np.mean(dataset, axis=0)
-    labels = np.sort(np.unique(prediction))
-    numerator = np.sum([
-        np.sum(np.sum(dataset[prediction == label] - centroids[label], axis=1) ** 2)
-        for label in labels
-    ])
-    denominator = np.sum(np.sum(dataset - attributes_mean, 1) ** 2)
-
-    return 1 - numerator / denominator
-
-
 #%% md
 
 """  #    
@@ -560,25 +496,31 @@ Escogemos 5 clusters como punto intermedio.
 
 #%%
 
-kmeans = KMeans(n_clusters=5).fit(extrinsic_dataset)
-extrinsic_kmeans_prediction = kmeans.predict(extrinsic_dataset)
+model = KMeans(n_clusters=5).fit(extrinsic_dataset)
+prediction = model.predict(extrinsic_dataset)
+extrinsic_metrics['k-means'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
 
-plot_dataset(extrinsic_dataset, extrinsic_kmeans_prediction)
-
-#%% md
-
-#### Métricas de k-means
-
-#%%
-
-extrinsic_metrics['k-means'] = calculate_extrinsic_metrics(extrinsic_classes, extrinsic_kmeans_prediction)
+plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-### Algoritmo 2
+"""  #     
+blablabla
+
+"""  #
+
+#%% md
+
+### Algoritmo Jerárquico Aglomerativo
+#### Ejecución del algoritmo
 
 #%%
 
+model = linkage(extrinsic_dataset, 'average')
+prediction = cut_tree(model, n_clusters=5).flatten()
+extrinsic_metrics['Jerárquico'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+
+plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
@@ -645,10 +587,14 @@ Ejecutamos la predicción de k-means con 5 clusters y visualizamos la agrupació
 
 #%%
 
-kmeans = KMeans(n_clusters=5).fit(intrinsic_dataset)
-prediction = kmeans.predict(intrinsic_dataset)
+model = KMeans(n_clusters=5).fit(intrinsic_dataset)
+fitting = {
+    'prediction': model.predict(intrinsic_dataset),
+    'centers': model.cluster_centers_
+}
+intrinsic_metrics['k-means'] = calculate_intrinsic_metrics(intrinsic_dataset, fitting, distancia_euclidiana)
 
-plot_dataset(intrinsic_dataset, prediction)
+plot_dataset(intrinsic_dataset, fitting['prediction'])
 
 #%% md
 
@@ -659,10 +605,24 @@ Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han
 
 #%% md
 
-### Algoritmo 2
+### Algoritmo Jerárquico Aglomerativo
 
 #%%
 
+model = linkage(intrinsic_dataset, 'average')
+
+fitting = {
+    'prediction': cut_tree(model, n_clusters=5).flatten(),
+    # TODO: de momento pongo esto, porqué el _centers_ parece que es solo para kmeans
+    # y entonces no se que usar para las métricas que necesitan centros.
+    'centers': centroid(cut_tree(model, n_clusters=5))
+
+}
+
+# intrinsic_metrics['Jerárquico'] = calculate_intrinsic_metrics(intrinsic_dataset, fitting, distancia_euclidiana)
+
+
+# plot_dataset(intrinsic_dataset, fitting['prediction'])
 
 #%% md
 
@@ -688,9 +648,19 @@ Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han
 #%% md
 
 ## Comparación algoritmos
+### Métricas dataset extínseco
 
 #%%
 
+display(pd.DataFrame(extrinsic_metrics))
+
+#%% md
+
+### Métricas dataset intínseco
+
+#%%
+
+display(pd.DataFrame(intrinsic_metrics))
 
 #%% md
 
