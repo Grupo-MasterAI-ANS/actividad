@@ -13,6 +13,8 @@ Bloque de introducción
 
 #%%
 
+import itertools as it
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -32,41 +34,48 @@ Esta nos permite escoger los atributos que usaremos asi como extraer a un variab
 
 #%%
 
-def load_dataset(dataset_url: str, separator: str = '\s+', class_position: int = None, remove: list = None):
+def load_dataset(dataset_url: str, attributes: dict, separator: str = '\s+', class_position: int = None):
     """Load a dataset from a specified url into a pandas DataFrame.
 
-    :param str dataset_url: an url from archive.ics.uci.edu
+    :param str dataset_url: an url from a text based dataset
+    :param dict attributes: attributes to keep in dictionary form:
+        key: attribute position, value: attribute name
     :param str separator: file separator.
     :param int class_position: column index where classes are defined (starts by 0)
-       if left empty (None), no prediction class will be used (intrinsic case).
-    :param list remove: attributes indexes to remove.
+        if left empty (None), no prediction class will be used (intrinsic case).
     """
     # Load dataset as a pandas DataFrame from a specified url.
     dataset = pd.read_csv(dataset_url, sep=separator, header=None)
+
+    # Add class index to the indexes to extract.
+    if class_position is not None:
+        attributes[class_position] = 'classes'
+
+    # Keep only desired attributes and classes.
+    dataset = dataset[attributes]
+
+    # Force all values to be numeric.
+    for (column, values) in dataset.iteritems():
+        # Do not transform classes.
+        if column == class_position:
+            continue
+
+        # Coerce transforms non-numeric values into NaN.
+        dataset[column] = pd.to_numeric(values, errors='coerce')
+
+    # Remove all NaN rows.
+    dataset.dropna(inplace=True)
 
     # Extrinsic case, dataset comes with its classes.
     if class_position is not None:
         # Extract classes.
         classes = dataset.iloc[:, class_position]
-        # Add class index to the indexes to remove.
-        remove = [class_position] if remove is None else remove + [class_position]
+        # Remove classes from attributes.
+        dataset.drop(class_position, axis=1, inplace=True)
 
     # Intrinsic case, dataset has no classes.
     else:
         classes = None
-
-    # Remove noise attributes.
-    if remove is not None:
-        dataset.drop(remove, axis=1, inplace=True)
-
-    # Force all values to be numeric.
-    for (column, values) in dataset.iteritems():
-        # Coerce transforms non-numeric values into NaN.
-        dataset[column] = pd.to_numeric(values, errors='coerce')
-
-    # Remove all NaN rows.
-    # TODO: this might result in different classes vs attribute sizes. To be reviewed.
-    dataset.dropna(inplace=True)
 
     return classes, dataset
 
@@ -84,12 +93,12 @@ También, en caso de usar más de dos atributos del dataset, usaremos el *pairpl
 #%%
 
 def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
-    # For bidimentionnal datasets, use a simple plot.
+    # For bi-dimensional dataset, use a simple plot.
     if len(dataset) == 2:
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.scatter(dataset.iloc[:, 0], dataset.iloc[:, 1], c=classes)
 
-    # For extra-dimentionnal datasets, compare attribrutes.
+    # For extra-dimensional dataset compare attributes.
     else:
         if classes is not None:
             # Clone dataset to avoid modifying the original one.
@@ -354,15 +363,40 @@ def medida_davies_bouldin(X, Xyp, cXs, distancia):
 
 """  #    
 ### Dataset extrínseca
-los cilindros están en posición 1 (partiendo de 0)
-no los he eliminado para que veamos el hue
+   This dataset is a slightly modified version of the dataset provided in
+   the StatLib library.  In line with the use by Ross Quinlan (1993) in
+   predicting the attribute "mpg", 8 of the original instances were removed 
+   because they had unknown values for the "mpg" attribute.  The original 
+   dataset is available in the file "auto-mpg.data-original".
+
+   "The data concerns city-cycle fuel consumption in miles per gallon,
+    to be predicted in terms of 3 multivalued discrete and 5 continuous
+    attributes." (Quinlan, 1993)
+
+**Number of Instances:** 398
+
+**Number of Attributes:** 9 including the class attribute
+
+**Attribute Information:**
+
+    1. mpg:           continuous
+    2. cylinders:     multi-valued discrete
+    3. displacement:  continuous
+    4. horsepower:    continuous
+    5. weight:        continuous
+    6. acceleration:  continuous
+    7. model year:    multi-valued discrete
+    8. origin:        multi-valued discrete
+    9. car name:      string (unique for each instance)
 
 """  #
 
 #%%
 
 dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
-extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, class_position=1, remove=[7, 8])
+#attributes = {0: 'mpg', 2: 'displacement', 3: 'horsepower', 4: 'weight', 5: 'acceleration'}
+attributes = {3: 'horsepower', 5: 'acceleration'}
+extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, attributes, class_position=1)
 
 #%%
 
@@ -392,7 +426,8 @@ Cargamos nuestro dataset (*intrinsic_dataset*):
 #%%
 
 dataset_url = 'http://cs.joensuu.fi/sipu/datasets/Aggregation.txt'
-_, intrinsic_dataset = load_dataset(dataset_url, remove=[2])
+attributes = {0: 'dim 1', 1: 'dim 2'}
+_, intrinsic_dataset = load_dataset(dataset_url, attributes)
 
 #%% md
 
@@ -528,7 +563,7 @@ plot_dataset(extrinsic_dataset, extrinsic_kmeans_prediction)
 
 #%%
 
-#display(extrinsic_metrics(extrinsic_classes, extrinsic_kmeans_prediction))
+# display(extrinsic_metrics(extrinsic_classes, extrinsic_kmeans_prediction))
 
 #%% md
 
