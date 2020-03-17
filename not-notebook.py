@@ -14,13 +14,17 @@ Bloque de introducción
 #%%
 
 import itertools as it
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy.cluster.hierarchy import linkage, cut_tree
 from sklearn import metrics
 from sklearn.cluster import KMeans
-from scipy.cluster.hierarchy import linkage, fcluster, cut_tree, centroid
+from sklearn.cluster import MeanShift
+from sklearn.cluster import SpectralClustering
+from sklearn.mixture import GaussianMixture
 
 #%% md
 
@@ -298,14 +302,14 @@ La función a continuación nos permite generar un diccionario con todas las mé
 
 #%%
 
-def calculate_intrinsic_metrics(dataset, model, distancia):
+def calculate_intrinsic_metrics(dataset, prediction):
     return {
-        'RMSSTD': RMSSTD_score(dataset, model['prediction'], model['centers']),
-        'R²': r2_score(dataset, model['prediction'], model['centers']),
-        'Silueta': metrics.silhouette_score(dataset, model['prediction']),
-        'Calinski Harabasz': metrics.calinski_harabasz_score(dataset, model['prediction']),
-        'Medida I': medida_I(dataset, model['prediction'], model['centers'], distancia),
-        'Davies Bouldin': metrics.davies_bouldin_score(dataset, model['prediction'])
+        # 'RMSSTD': RMSSTD_score(dataset, model['prediction'], model['centers']),
+        # 'R²': r2_score(dataset, model['prediction'], model['centers']),
+        'Silueta': metrics.silhouette_score(dataset, prediction),
+        'Calinski Harabasz': metrics.calinski_harabasz_score(dataset, prediction),
+        # 'Medida I': medida_I(dataset, model['prediction'], model['centers'], distancia),
+        'Davies Bouldin': metrics.davies_bouldin_score(dataset, prediction)
     }
 
 
@@ -516,32 +520,69 @@ blablabla
 
 #%%
 
+# Generamos el modelo.
 model = linkage(extrinsic_dataset, 'average')
 prediction = cut_tree(model, n_clusters=5).flatten()
+# Guardamos la métricas.
 extrinsic_metrics['Jerárquico'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
 
+# Presentamos los clusters.
 plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-### Algoritmo 3
+### Algoritmo Agrupamiento espectral
 
 #%%
 
+K = 5
+knn = 50
+
+# Generamos el modelo.
+model = SpectralClustering(
+    n_clusters=K, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
+).fit(extrinsic_dataset)
+prediction = model.labels_
+
+# Guardamos la métricas.
+extrinsic_metrics['Espectral'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+
+# Presentamos los clusters.
+plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-### Algoritmo 4
+### Algoritmo Mean Shift
 
 #%%
 
+h = 6
+
+# Generamos el modelo.
+model = MeanShift(bandwidth=h).fit(extrinsic_dataset)
+prediction = model.labels_
+
+# Guardamos la métricas.
+extrinsic_metrics['Means-Shift'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+
+# Presentamos los clusters.
+plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-### Algritmo 5
+### Algritmo EM
 
 #%%
 
+# Generamos el modelo.
+model = GaussianMixture(n_components=5, max_iter=1000).fit(extrinsic_dataset)
+prediction = model.predict(extrinsic_dataset)
+
+# Guardamos la métricas.
+extrinsic_metrics['EM'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+
+# Presentamos los clusters.
+plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
@@ -587,14 +628,15 @@ Ejecutamos la predicción de k-means con 5 clusters y visualizamos la agrupació
 
 #%%
 
+# Generamos el modelo.
 model = KMeans(n_clusters=5).fit(intrinsic_dataset)
-fitting = {
-    'prediction': model.predict(intrinsic_dataset),
-    'centers': model.cluster_centers_
-}
-intrinsic_metrics['k-means'] = calculate_intrinsic_metrics(intrinsic_dataset, fitting, distancia_euclidiana)
+prediction = model.predict(intrinsic_dataset)
 
-plot_dataset(intrinsic_dataset, fitting['prediction'])
+# Guardamos la métricas.
+intrinsic_metrics['k-means'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
+
+# Presentamos los clusters.
+plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
@@ -610,40 +652,68 @@ Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han
 #%%
 
 model = linkage(intrinsic_dataset, 'average')
+prediction = cut_tree(model, n_clusters=5).flatten()
+intrinsic_metrics['Jerárquico'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
 
-fitting = {
-    'prediction': cut_tree(model, n_clusters=5).flatten(),
-    # TODO: de momento pongo esto, porqué el _centers_ parece que es solo para kmeans
-    # y entonces no se que usar para las métricas que necesitan centros.
-    'centers': centroid(cut_tree(model, n_clusters=5))
-
-}
-
-# intrinsic_metrics['Jerárquico'] = calculate_intrinsic_metrics(intrinsic_dataset, fitting, distancia_euclidiana)
-
-
-# plot_dataset(intrinsic_dataset, fitting['prediction'])
+plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-### Algoritmo 3
+### Algoritmo Agrupamiento espectral
 
 #%%
 
+K = 7
+knn = 30
+model = SpectralClustering(
+    n_clusters=K, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
+).fit(intrinsic_dataset)
+prediction = model.labels_
+intrinsic_metrics['Espectral'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
+
+plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-### Algoritmo 4
+"""  #    
+El jerarquico con 30 KNN resuelve bien la clusterización con 7 grupos, si se reduce no lo hace tan bien, y  partir de 50 tampoco. Hay que encontar el valor correcto.    
+Buscando 5 clusters tambien lo hace bien.
 
-#%%
-
+"""  #
 
 #%% md
 
-### Algoritmo 5
+### Algoritmo Mean Shift
 
 #%%
 
+h = 6
+model = MeanShift(bandwidth=h).fit(intrinsic_dataset)
+prediction = model.labels_
+intrinsic_metrics['Means-Shift'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
+
+plot_dataset(intrinsic_dataset, prediction)
+
+#%% md
+
+### Algoritmo EM
+
+#%%
+
+from sklearn.mixture import GaussianMixture
+
+model = GaussianMixture(n_components=7, max_iter=1000).fit(intrinsic_dataset)
+prediction = model.predict(intrinsic_dataset)
+intrinsic_metrics['EM'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
+
+plot_dataset(intrinsic_dataset, prediction)
+
+#%% md
+
+"""  #    
+Este a veces la clava y a veces no. Hay que darle varias veces. Es curioso.
+
+"""  #
 
 #%% md
 
