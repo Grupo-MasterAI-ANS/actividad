@@ -14,11 +14,9 @@ Bloque de introducción
 #%%
 
 import itertools as it
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from scipy.cluster.hierarchy import linkage, cut_tree
 from sklearn import metrics
 from sklearn.cluster import KMeans
@@ -81,6 +79,9 @@ def load_dataset(dataset_url: str, attributes: dict, separator: str = '\s+', cla
     else:
         classes = None
 
+    # Set attributes title.
+    dataset.rename(columns=attributes, inplace=True)
+
     return classes, dataset
 
 
@@ -97,20 +98,32 @@ También, en caso de usar más de dos atributos del dataset, usaremos el *pairpl
 #%%
 
 def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
-    # For bi-dimensional dataset, use a simple plot.
-    if len(dataset.columns) == 2:
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.scatter(dataset.iloc[:, 0], dataset.iloc[:, 1], c=classes)
+    # Combine all attributes two by two.
+    combinations = list(it.combinations(dataset.columns, r=2))
+    # Limit the number of plot columns.
+    max_cols = 4
+    cols = len(combinations) if len(combinations) <= max_cols else max_cols
+    # From the columns number, set rows number.
+    rows = int(np.ceil(len(combinations) / cols))
 
-    # For extra-dimensional dataset compare attributes.
-    else:
-        if classes is not None:
-            # Clone dataset to avoid modifying the original one.
-            dataset = dataset.copy()
-            dataset['classes'] = classes.astype(str)
-            sns.pairplot(dataset, hue='classes')
-        else:
-            sns.pairplot(dataset)
+    # Calculate plot sizes depending on subplots number.
+    size_x = int(13 * cols / max_cols) + 7
+    size_y = 6 if rows * cols == 1 else 5 * rows
+
+    # Build up all subplot combinations.
+    fig, ax = plt.subplots(rows, cols, figsize=(size_x, size_y))
+    for key, pair in enumerate(combinations):
+        # Calculate plot axis position from sub-plot key.
+        column = key % cols
+        row = int(key / cols) % rows
+        # Position needs to be a list when multiple rows.
+        position = column if rows == 1 else (row, column)
+        # Ax is not an array when single row and column.
+        subplot = ax if rows * cols == 1 else ax[position]
+
+        # Plot attributes values and titles.
+        subplot.scatter(dataset[pair[0]], dataset[pair[1]], c=classes)
+        subplot.set_title(str(pair[0]) + ' / ' + str(pair[1]))
 
 
 #%% md
@@ -353,8 +366,7 @@ def calculate_intrinsic_metrics(dataset, prediction):
 
 # Cargamos el dataset.
 dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
-# attributes = {0: 'mpg', 2: 'displacement', 3: 'horsepower', 4: 'weight', 5: 'acceleration'}
-attributes = {3: 'horsepower', 5: 'acceleration'}
+attributes = {0: 'mpg', 2: 'displacement', 3: 'horsepower', 4: 'weight', 5: 'acceleration'}
 extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, attributes, class_position=1)
 
 # Soporte para las métricas
