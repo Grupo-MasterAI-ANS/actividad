@@ -586,10 +586,18 @@ plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-## Comparación algoritmos
+### Comparación algoritmos
 
 #%%
 
+display(pd.DataFrame(extrinsic_metrics))
+
+#%% md
+
+"""  #    
+blabla comparación dataset extrinseca
+
+"""  #
 
 #%% md
 
@@ -717,20 +725,18 @@ Este a veces la clava y a veces no. Hay que darle varias veces. Es curioso.
 
 #%% md
 
-## Comparación algoritmos
-### Métricas dataset extínseco
-
-#%%
-
-display(pd.DataFrame(extrinsic_metrics))
-
-#%% md
-
-### Métricas dataset intínseco
+### Comparación algoritmos
 
 #%%
 
 display(pd.DataFrame(intrinsic_metrics))
+
+#%% md
+
+"""  #     
+blabla comparación dataset intrinseco
+
+"""  #
 
 #%% md
 
