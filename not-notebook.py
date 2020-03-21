@@ -15,12 +15,9 @@ import seaborn as sns
 import numpy as np
 
 # Para las medidas extrínsecas
-from sklearn import metrics
-from sklearn import datasets
-from sklearn.cluster import KMeans
-from sklearn.metrics import pairwise_distances
-from sklearn.metrics import davies_bouldin_score
-from sklearn.metrics.cluster import contingency_matrix
+from sklearn import metrics, datasets
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, MeanShift, SpectralClustering
+from sklearn.metrics import davies_bouldin_score, pairwise_distances
 
 #%% md
 
@@ -116,12 +113,16 @@ def mediciones_extrinsecas(exDs, y_true, y_pred):
     com = metrics.completeness_score(y_true, y_pred)
     vm = metrics.v_measure_score(y_true, y_pred)
     fm = metrics.fowlkes_mallows_score(y_true, y_pred)
-
+    media = (ari+im+hom+com+vm+fm)/6
     sil = metrics.silhouette_score(exDs, y_true, metric='euclidean')
     ch = metrics.calinski_harabasz_score(exDs, y_true)
     db = davies_bouldin_score(exDs, y_true)
-    metricas = {"ari": ari, "im": im, "hom":hom, "com":com, "vm":vm, "fm":fm, "sil":sil, "ch":ch, "db":db}
+    metricas = { "ari": ari, "im": im, "hom":hom, "com":com, "vm":vm, "fm":fm, "sil":sil, "ch":ch, "db":db, "media":media }
     return metricas
+
+
+comparacion_extrinsecas = {"Kmedias":0,"Aglomerativo":0,"DBSCAN":0,"Deslizamiento":0,"Espectral":0}
+
 
 
 #%% md
@@ -229,7 +230,7 @@ plot_dataset(atributos = intrinsic_dataset)
 
 #%% md
 
-### Algoritmo k-means
+### Algoritmo 1: K medias
 
 #%_ Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
 #%%
@@ -239,45 +240,107 @@ labels_pred = kmeans_model.labels_
 meds_kmeans_ext = mediciones_extrinsecas(extrinsic_dataset, labels_true, labels_pred)
 for key,value in meds_kmeans_ext["metricas"].items():
     print(key,":",value)
+comparacion_extrinsecas["Kmedias"] = meds_kmeans_ext["media"]
 #%% md
 
-### Algoritmo 2
-
+### Algoritmo 2: Aglomerativo
 #%%
 
-
-
-#%% md
-
-### Algoritmo 3
-
-#%%
-
-
+modelo = AgglomerativeClustering(n_clusters=3).fit(extrinsic_dataset)
+labels_pred = modelo.labels_
+meds_aglom_ext = mediciones_extrinsecas(extrinsic_dataset,extrinsic_classes,labels_pred)
+for key,value in meds_aglom_ext.items():
+    print(key,":",value)
+comparacion_extrinsecas["Aglomerativo"] = meds_aglom_ext["media"]
 
 #%% md
 
-### Algoritmo 4
-
+### Algoritmo 3: DBSCAN
 #%%
 
+def calcular_DBSCAN(eps):
+    modelo = DBSCAN(eps=eps).fit(extrinsic_dataset)
+    labels_pred = modelo.labels_
+    x = mediciones_extrinsecas(extrinsic_dataset,extrinsic_classes,labels_pred)
+    media = (x["ari"]+x["im"]+x["hom"]+x["com"]+x["vm"]+x["fm"])/6
+    return {"modelo":x,"mediciones":x}
 
+def repetir_dbscan(r):
+    res = {"mediciones": {"media":0}}
+    for i in np.arange(1,r+1):
+        x = calcular_DBSCAN(i/2)
+        if x["mediciones"]["media"] > res["mediciones"]["media"]:
+            res = x
+            res["distancia"] = i/2
+    return res
+
+
+eps = 50  # Distancias a probar (en pasos de 0.5)
+best = repetir_dbscan(eps)
+for key, value in best["mediciones"].items():
+    print(key, ":", value)
+print("Mejor distancia identificada:", best["distancia"])
+comparacion_extrinsecas["DBSCAN"] = best["mediciones"]["media"]
 
 #%% md
 
-### Algritmo 5
+### Algoritmo 4: Deslizamiento de media
 
 #%%
 
+modelo = MeanShift().fit(extrinsic_dataset)
+labels_pred = modelo.labels_
+meds_meanshift_ext = mediciones_extrinsecas(extrinsic_dataset,extrinsic_classes,labels_pred)
+for key,value in x.items():
+    print(key,":",value)
+comparacion_extrinsecas["Deslizamiento"] = meds_meanshift_ext["media"]
+
+#%% md
+
+### Algritmo 5: Espectral
+
+#%%
+
+def mejor_espectral(nn):
+    vecinos = 0
+    media_max = 0
+    modelo_fin = None
+    for i in np.arange(nn):
+        modelo = SpectralClustering(affinity='nearest_neighbors',n_neighbors=i+1).fit(extrinsic_dataset)
+        labels_pred = modelo.labels_
+        x = mediciones_extrinsecas(extrinsic_dataset,extrinsic_classes,labels_pred)
+        if x["media"] > media_max:
+            vecinos = i+1
+            media_max = x["media"]
+            modelo_fin = modelo
+    return {"modelo":modelo_fin, "vecinos":vecinos, "mediciones":x}
+
+def repetir_espectral(v,r):
+    print("Buscando mejor clustering espectral.\nProbando de 1 a",v,"vecinos más cercanos y repitiendo",r,"veces.\nTiempo de ejecución estimado:",int((v/53)*3*r),"segundos.")
+    mejor = {"mediciones": {"media":0}}
+    for i in np.arange(r+1):
+        res = mejor_espectral(v)
+        if res["mediciones"]["media"] > mejor["mediciones"]["media"]:
+            mejor = res
+    return mejor
 
 
+vecinos = 50
+repeticiones = 20
+best = repetir_espectral(vecinos, repeticiones)
+print("El mejor espectral encontrado es con", best["vecinos"], "vecinos y da una media de", best["media"])
+for key, value in best["mediciones"].items():
+    print(key, ":", value)
+comparacion_extrinsecas["Espectral"] = best["mediciones"]["media"]
 #%% md
 
 ## Comparación algoritmos
 
+#%_ Como se puede observar a continuación, el algoritmo que mejor agrupa nuestros datos es K-medias:
 #%%
 
-
+for key,value in comparacion_extrinsecas.items():
+    print(key,":",value)
 
 #%% md
 
