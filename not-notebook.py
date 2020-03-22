@@ -28,8 +28,8 @@ from sklearn.mixture import GaussianMixture
 
 """  #    
 ### Descarga
-Preparamos una función genérica de descarga de los datasets y de su preparación.     
-Esta nos permite escoger los atributos que usaremos asi como extraer a un variable aparte las clases en caso de estar disponibles.
+Preparamos una función genérica para la descarga de los datasets y su preparación.     
+Ésta nos permite escoger los atributos que usaremos, así como extraer a un variable aparte las clases en caso de estar disponibles.
 
 """  #
 
@@ -89,8 +89,8 @@ def load_dataset(dataset_url: str, attributes: dict, separator: str = '\s+', cla
 
 """  #    
 ### Visualización
-Usaremos una función común para presentar los datos, tanto como si están clasificados o no.    
-También, en caso de usar más de dos atributos del dataset, usaremos el *pairplot* de seaborn para presentar los atributos de dos en dos.
+Usaremos una función común para presentar los datos, tanto si están clasificados como si no.    
+Además, en caso de usar más de dos atributos del dataset, usaremos el *pairplot* de seaborn para presentar los atributos de dos en dos.
 
 """  #
 
@@ -232,7 +232,7 @@ def calculate_extrinsic_metrics(real_classes, predicted_classes):
 
 """  #    
 ### Métricas intrínsecas
-Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o por lo menso en sklearn.
+Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o al menos en sklearn.
 
 """  #
 
@@ -304,11 +304,15 @@ def medida_I(dataset, prediction, centers, distance_function, p=1):
     return (num / den * distance_max) ** p
 
 
+#%%
+
+
+
 #%% md
 
 """  #    
 ####  Agrupación métricas intrínsecas
-La función a continuación nos permite generar un diccionario con todas las métricas intrínsecas y poder compararlas entre algoritmos.
+La siguiente función nos permite generar un diccionario con todas las métricas intrínsecas y poder compararlas entre algoritmos.
 
 """  #
 
@@ -421,7 +425,7 @@ plot_dataset(intrinsic_dataset)
 #%% md
 
 """  #    
-Destacamos que se podría clasificar con 4, 5 o con 7 clusters.
+Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #
 
@@ -429,7 +433,7 @@ Destacamos que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #    
 # Algoritmos
-Preparamos funciones 'herramienta' para cada algoritmo de forma a poder analizarlos.
+Preparamos funciones 'herramienta' para cada algoritmo para poder analizarlos.
 
 """  #
 
@@ -440,8 +444,8 @@ Preparamos funciones 'herramienta' para cada algoritmo de forma a poder analizar
 #%% md
 
 """  #    
-Métrica R cadrado. No usamos directamente la de sklean al esta necesitar la clases reales.
-Nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
+Métrica R cadrado. No usamos directamente la de sklean al ésta necesitar la clases reales.
+Esta métrica nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
 
 """  #
 
@@ -684,7 +688,7 @@ plot_dataset(intrinsic_dataset, prediction)
 #%%
 
 K = 7
-knn = 30
+knn = 34
 model = SpectralClustering(
     n_clusters=K, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
 ).fit(intrinsic_dataset)
@@ -746,7 +750,12 @@ display(pd.DataFrame(intrinsic_metrics))
 #%% md
 
 """  #     
-blabla comparación dataset intrinseco
+Según el **coeficiente de silueta** tanto con el *Jerárquico* como con el *Means-Shift* obtenemos muestras más separadas de otros clústers vecinos. Pero los valores en el resto de algoritmos son bastante parecidos, y por tanto no es una característica claramente diferenciadora.
+
+Sin embargo, el indicador **Calinski-Harabasz** que relaciona la cohesión y separación de la siguiente forma: $\frac{𝑆𝑆𝐵/(𝑘−1)}
+{𝑆𝑆𝑊/(𝑛−𝑘)}$, nos da como mejor resultado de clasificación el obtenido con el algoritmo *K-Means*, seguido del *Espectral*.
+
+Finalmente el índice **Davies Bouldin**, señala al *Espectral* como el mejor agrupamiento, esto es debido a que se mide la proporción entre la suma de la dispersión dentro del clúster a la separación entre clústers, y por tanto apremia a resultados de agrupamiento en los que no tienen por qué ser similares los grupos entre si.
 
 """  #
 
