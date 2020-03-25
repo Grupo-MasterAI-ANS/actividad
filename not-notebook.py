@@ -1,7 +1,10 @@
 #%% md
 
 """  #    
-Bloque de introducción
+# Trabajo final de Aprendizaje No Supervisado
+- **Coordinador**: Adrien Felipe
+- **Secretaria**: Carolina Martínez
+- **Revisor**: Enrique Navarro
 
 """  #
 
@@ -13,23 +16,36 @@ Bloque de introducción
 
 #%%
 
+import pandas as pd
+import seaborn as sns
+import numpy as np
 import itertools as it
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+
+# Para las medidas extrínsecas
+from sklearn import metrics, datasets
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, MeanShift, SpectralClustering
+from sklearn.metrics import davies_bouldin_score, pairwise_distances
+from sklearn.metrics.cluster import contingency_matrix
 from scipy.cluster.hierarchy import linkage, cut_tree
-from sklearn import metrics
-from sklearn.cluster import KMeans
-from sklearn.cluster import MeanShift
-from sklearn.cluster import SpectralClustering
-from sklearn.mixture import GaussianMixture
+
+# Eliminamos avisos molestos
+import warnings
+
+warnings.filterwarnings("ignore")
 
 #%% md
 
 """  #    
-### Descarga
-Preparamos una función genérica para la descarga de los datasets y su preparación.     
+### Funciones de apoyo
+#### Función de carga del dataset
+Preparamos una función genérica para para simplificar la descarga de los datasets y su preparación.     
 Ésta nos permite escoger los atributos que usaremos, así como extraer a un variable aparte las clases en caso de estar disponibles.
+Esta acepta varios parámetros:
+ - dataset_url: cadena con la ruta al recurso desde donde cargar el dataset.
+ - attributes: atributos del dataset a usar (pocisión y nombre).
+ - separator (opcional): caracter de división en el origen del dataset.
+ - class_position (opcional): ubicación en el dataset de la clase.
 
 """  #
 
@@ -88,9 +104,14 @@ def load_dataset(dataset_url: str, attributes: dict, separator: str = '\s+', cla
 #%% md
 
 """  #    
-### Visualización
-Usaremos una función común para presentar los datos, tanto si están clasificados como si no.    
-Además, en caso de usar más de dos atributos del dataset, usaremos el *pairplot* de seaborn para presentar los atributos de dos en dos.
+#### Función de visualización
+Usaremos una función común para presentar los datos, tanto si están clasificados como si no.       
+Esta función presenta una combinación de dos en dos de todos los atributos, asi como adapta las dimensiones de la
+gráfica según la cantidad de sub-gráficas a presentar.
+
+Recibe dos parámetros:
+ - dataset: El DataFrame con los atributos a representar
+ - classes (opcional): El DataFrame con la clase de cada instancia
 
 """  #
 
@@ -128,8 +149,12 @@ def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
 
 #%% md
 
+"""  #    
 ## Métricas
-### Métricas extrínsecas
+### Funciones de cálculo de medidas extrínsecas
+
+"""  #
+
 
 #%%
 
@@ -208,15 +233,24 @@ def medida_entropia(mat):
 #%% md
 
 """  #     
-####  Agrupación métricas extrínsecas
-La función a continuación nos permite generar un diccionario con todas las métricas intrínsecas y poder compararlas entre algoritmos.
+#### Función de cálculo de las medidas extrínsecas
+Función que calcula varias medidas cualitativas del agrupamiento, de forma a poder comparar cada algoritmo.
+ - Error, pureza, entropía, información mutua y F1 tal como se han visto en clase.
+ - ARI mide la similaridad entre las clases y los predichos
+ - Homogeneidad (todos los valores predichos son del clúster correcto)
+ - Completación (todos los valores de una clase se predicen en el mismo clúster)
+ - Medida V (media armónica de homogeneidad y completación). Parámetro beta (por defecto 1) para ponderar
+ - Fowlkes-Mallows es la media geométrica de las parejas precision-recall
+ - Silhouette
+ - Calinski-Harabasz
+ - Davies-Bouldin
 
 """  #
 
 
 #%%
 
-def calculate_extrinsic_metrics(real_classes, predicted_classes):
+def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
     confusion_matrix = matriz_confusion(real_classes, predicted_classes)
 
     return {
@@ -224,14 +258,22 @@ def calculate_extrinsic_metrics(real_classes, predicted_classes):
         'Pureza': medida_pureza(confusion_matrix),
         'F1': medida_f1(confusion_matrix),
         'Entropía': medida_entropia(confusion_matrix),
-        'Información mútua': metrics.mutual_info_score(real_classes, predicted_classes)
+        'Información mútua': metrics.mutual_info_score(real_classes, predicted_classes),
+        'ARI': metrics.adjusted_rand_score(real_classes, predicted_classes),
+        'Homogeneidad': metrics.homogeneity_score(real_classes, predicted_classes),
+        'Completación': metrics.completeness_score(real_classes, predicted_classes),
+        'Medida V': metrics.v_measure_score(real_classes, predicted_classes),
+        'Fowlkes-Mallows': metrics.fowlkes_mallows_score(real_classes, predicted_classes),
+        'Silhouette': metrics.silhouette_score(dataset, predicted_classes, metric='euclidean'),
+        'Calinski-Harabasz': metrics.calinski_harabasz_score(dataset, predicted_classes),
+        'Davies-Bouldin': davies_bouldin_score(dataset, predicted_classes)
     }
 
 
 #%% md
 
 """  #    
-### Métricas intrínsecas
+### Funciones de cálculo de medidas intrínsecas
 Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o al menos en sklearn.
 
 """  #
@@ -311,8 +353,14 @@ def medida_I(dataset, prediction, centers, distance_function, p=1):
 #%% md
 
 """  #    
-####  Agrupación métricas intrínsecas
-La siguiente función nos permite generar un diccionario con todas las métricas intrínsecas y poder compararlas entre algoritmos.
+#### Función de cálculo de las medidas intrínsecas
+Función que calcula varias medidas cualitativas del agrupamiento.
+ - Silhouette
+ - Calinski-Harabasz
+ - Davies-Boudin
+
+
+No usamos RMSSTD, R² y Medida I al estas nececitar centroides, pero no todos los algoritmos lo contemplan.
 
 """  #
 
@@ -321,13 +369,28 @@ La siguiente función nos permite generar un diccionario con todas las métricas
 
 def calculate_intrinsic_metrics(dataset, prediction):
     return {
-        # 'RMSSTD': RMSSTD_score(dataset, model['prediction'], model['centers']),
-        # 'R²': r2_score(dataset, model['prediction'], model['centers']),
-        'Silueta': metrics.silhouette_score(dataset, prediction),
+        'Silhouette': metrics.silhouette_score(dataset, prediction),
         'Calinski Harabasz': metrics.calinski_harabasz_score(dataset, prediction),
-        # 'Medida I': medida_I(dataset, model['prediction'], model['centers'], distancia),
         'Davies Bouldin': metrics.davies_bouldin_score(dataset, prediction)
     }
+
+
+#%% md
+
+""" #    
+### Presentación métricas
+Usaremos la función a continuación para presentar la comparación de las métricas, usando una media comparativa.
+
+"""  #
+
+
+#%%
+
+def compare_metrics(metrics_data: dict) -> pd.DataFrame:
+    output = pd.DataFrame(metrics_data)
+    output.loc['mean'] = output.mean(axis=0)
+
+    return output
 
 
 #%% md
@@ -338,31 +401,22 @@ def calculate_intrinsic_metrics(dataset, prediction):
 
 """  #    
 ### Dataset extrínseca
-   This dataset is a slightly modified version of the dataset provided in
-   the StatLib library.  In line with the use by Ross Quinlan (1993) in
-   predicting the attribute "mpg", 8 of the original instances were removed 
-   because they had unknown values for the "mpg" attribute.  The original 
-   dataset is available in the file "auto-mpg.data-original".
+El origen de este dataset se remonta a datos usados en 1983 por la <i>American Statistical Association Exposition</i> y que se conservan en la Universidad de Carnegie Mellon, al que le faltan 8 instancias que se eliminaron para homogeneizar el dataset, ya que carecían del campo mpg.
 
-   "The data concerns city-cycle fuel consumption in miles per gallon,
-    to be predicted in terms of 3 multivalued discrete and 5 continuous
-    attributes." (Quinlan, 1993)
+ El dataset consta de:
+ - 392 instancias
+ - 8 atributos, que son:    
+     · mpg (millas por galón de combustible): de tipo continuo.    
+     · cylinders (cilindros): discreto multi evaluado.    
+     · displacement (cilindrada): continuo.    
+     · horsepower (caballos de potencia): continuo.    
+     · weight (peso): continuo    
+     · acceleration (aceleración): continuo    
+     · model-year (año del modelo): discrto multi evaluado.    
+     · origin (origen): discreto multi evaluado.    
+     · car name (nombre del coche): cadena (único para cada instancia)    
 
-**Number of Instances:** 398
-
-**Number of Attributes:** 9 including the class attribute
-
-**Attribute Information:**
-
-    1. mpg:           continuous
-    2. cylinders:     multi-valued discrete
-    3. displacement:  continuous
-    4. horsepower:    continuous
-    5. weight:        continuous
-    6. acceleration:  continuous
-    7. model year:    multi-valued discrete
-    8. origin:        multi-valued discrete
-    9. car name:      string (unique for each instance)
+Para el estudio que nos ocupa vamos a predecir el número de cilindros basándonos en la cilindrada y la potencia.
 
 """  #
 
@@ -370,22 +424,54 @@ def calculate_intrinsic_metrics(dataset, prediction):
 
 # Cargamos el dataset.
 dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
-attributes = {0: 'mpg', 2: 'displacement', 3: 'horsepower', 4: 'weight', 5: 'acceleration'}
+attributes = {0: 'mpg', 2: 'cilindrada', 3: 'potencia'}
 extrinsic_classes, extrinsic_dataset = load_dataset(dataset_url, attributes, class_position=1)
 
 # Soporte para las métricas
 extrinsic_metrics = {}
 
-#%%
-
-plot_dataset(extrinsic_dataset, extrinsic_classes)
-
 #%% md
 
 """  #    
-blablabla
+Se descartan el resto de valores para mantener baja la dimensión del vector descriptor y simplificar así los cálculos.
+Los datos vienen casi listos para trabajar con ellos. No se detectan campos vacíos:
 
 """  #
+
+#%%
+
+print(extrinsic_dataset.isnull().any())
+
+#%% md
+
+""" #    
+Sin embargo, en la potencia hay un valor anómalo, un "?" usado donde se desconocía el dato, por lo que se ha incorporado a la función de carga de datos un filtro para eliminarlo, ajustable por parámetro (limpiarNA)
+
+Vamos a observar la distribución de nuestra clase:
+
+"""  #
+
+#%%
+
+sns.distplot(extrinsic_classes)
+
+#%% md
+
+""" #    
+Se observa una marcada preponderancia de los valores de cilindros 4,6 y 8. Asumimos que probablemente las instancias que no pertenezcan a estos tres grupos se agrupen dentro de ellos lo que va a conllevar un pequeño error de base al escoger agrupamientos.
+
+"""  #
+
+#%% md
+
+""" #    
+Y la relación entre los atributos:
+
+"""  #
+
+#%%
+
+plot_dataset(extrinsic_dataset, extrinsic_classes)
 
 #%% md
 
@@ -459,7 +545,7 @@ Función para generar gráficamente la evolución de las métricas R² y Silueta
 
 #%%
 
-def kmeans_plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
+def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
     dataset = np.array(dataset)
     silhouette_values = []
     r2_values = []
@@ -486,13 +572,12 @@ def kmeans_plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10
 #%% md
 
 # Análisis dataset extrínseca
-## Algoritmos
 
 #%% md
 
 """  #    
-### Algoritmo k-means
-#### Selección del número de clusters
+
+### Selección del número de clusters
 
 A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
 
@@ -500,105 +585,156 @@ A fin de implementar el modelo de K-Medios, comencemos por determinar la cantida
 
 #%%
 
-kmeans_plot_clusters_selection(extrinsic_dataset)
+plot_clusters_selection(extrinsic_dataset)
 
 #%% md
 
 """  #    
-Vemos un "codo" pronunciando con 4 clusters, pero el ancho de silueta es "mínimo" a partir de 6 clusters.     
-Escogemos 5 clusters como punto intermedio.
+Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
 
 """  #
 
+#%%
+
+extrinsic_clusters = 4
+
 #%% md
 
-#### Ejecución del algoritmo
+## Algoritmos
+### Algoritmo 1: K medias
 
 #%%
 
-model = KMeans(n_clusters=5).fit(extrinsic_dataset)
+model = KMeans(n_clusters=extrinsic_clusters).fit(extrinsic_dataset)
 prediction = model.predict(extrinsic_dataset)
-extrinsic_metrics['k-means'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+extrinsic_metrics['k-means'] = calculate_extrinsic_metrics(extrinsic_dataset, extrinsic_classes, prediction)
 
 plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
 """  #     
-blablabla
+por corregir: k-means no ha sido capaz de encontrar el pequeño grupo
 
 """  #
 
 #%% md
 
-### Algoritmo Jerárquico Aglomerativo
+### Algoritmo 2: jerárquico aglomerativo
 #### Ejecución del algoritmo
 
 #%%
 
 # Generamos el modelo.
 model = linkage(extrinsic_dataset, 'average')
-prediction = cut_tree(model, n_clusters=5).flatten()
+prediction = cut_tree(model, n_clusters=extrinsic_clusters).flatten()
 # Guardamos la métricas.
-extrinsic_metrics['Jerárquico'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+extrinsic_metrics['Jerárquico'] = calculate_extrinsic_metrics(extrinsic_dataset, extrinsic_classes, prediction)
 
 # Presentamos los clusters.
 plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-### Algoritmo Agrupamiento espectral
+""" #    
+tampoco ha cojido el pequeño grupo
+
+"""  #
+
+
+#%% md
+
+### Algoritmo 3: DBSCAN
 
 #%%
 
-K = 5
-knn = 50
+def calcular_DBSCAN(eps):
+    modelo = DBSCAN(eps=eps).fit(extrinsic_dataset)
+    labels_pred = modelo.labels_
+    x = calculate_extrinsic_metrics(extrinsic_dataset, extrinsic_classes, labels_pred)
+    media = (x['ARI'] + x['Información mútua'] + x['Homogeneidad'] + x['Completación'] + x['Medida V'] + x[
+        'Fowlkes-Mallows']) / 6
+    return {"modelo": modelo, "mediciones": x, 'media': media, "prediction": labels_pred}
+
+
+def repetir_dbscan(r):
+    r *= 2
+    res = {"media": 0}
+    for i in np.arange(20 * 2, r + 1):
+        x = calcular_DBSCAN(i / 2)
+        if x["media"] > res["media"]:
+            res = x
+            res["distancia"] = i / 2
+    return res
+
+
+eps = 30  # Distancia máxima a probar (en pasos de 0.5)
+best = repetir_dbscan(eps)
+print("Mejor distancia identificada:", best["distancia"])
+extrinsic_metrics["DBSCAN"] = best["mediciones"]
+
+plot_dataset(extrinsic_dataset, best["prediction"])
+
+#%% md
+
+### Algoritmo 4: Deslizamiento de media
+
+#%%
 
 # Generamos el modelo.
-model = SpectralClustering(
-    n_clusters=K, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
-).fit(extrinsic_dataset)
+model = MeanShift().fit(extrinsic_dataset)
 prediction = model.labels_
 
 # Guardamos la métricas.
-extrinsic_metrics['Espectral'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+extrinsic_metrics['Means-Shift'] = calculate_extrinsic_metrics(extrinsic_dataset, extrinsic_classes, prediction)
 
 # Presentamos los clusters.
 plot_dataset(extrinsic_dataset, prediction)
+
 
 #%% md
 
-### Algoritmo Mean Shift
+### Algritmo 5: Espectral
 
 #%%
 
-h = 6
+def mejor_espectral(nn):
+    vecinos = 0
+    media_max = 0
+    modelo_fin = None
+    for i in np.arange(nn):
+        modelo = SpectralClustering(affinity='nearest_neighbors', n_neighbors=i + 1).fit(extrinsic_dataset)
+        labels_pred = modelo.labels_
+        x = calculate_extrinsic_metrics(extrinsic_dataset, extrinsic_classes, labels_pred)
+        x['media'] = (x['ARI'] + x['Información mútua'] + x['Homogeneidad'] + x['Completación'] + x['Medida V'] + x[
+            'Fowlkes-Mallows']) / 6
+        if x["media"] > media_max:
+            vecinos = i + 1
+            media_max = x["media"]
+            modelo_fin = modelo
+    return {"modelo": modelo_fin, "vecinos": vecinos, "mediciones": x, "prediction": labels_pred}
 
-# Generamos el modelo.
-model = MeanShift(bandwidth=h).fit(extrinsic_dataset)
-prediction = model.labels_
 
-# Guardamos la métricas.
-extrinsic_metrics['Means-Shift'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
+def repetir_espectral(v, r):
+    print("Buscando mejor clustering espectral.\nProbando de 1 a", v, "vecinos más cercanos y repitiendo", r,
+          "veces.\nTiempo de ejecución estimado:", int((v / 53) * 3 * r), "segundos.")
+    mejor = {"mediciones": {"media": 0}}
+    for i in np.arange(r + 1):
+        res = mejor_espectral(v)
+        if res["mediciones"]["media"] > mejor["mediciones"]["media"]:
+            mejor = res
+    return mejor
 
-# Presentamos los clusters.
-plot_dataset(extrinsic_dataset, prediction)
 
-#%% md
+vecinos = 50
+repeticiones = 20
+best = repetir_espectral(vecinos, repeticiones)
+print("El mejor espectral encontrado es con", best["vecinos"], "vecinos y da una media de", best["mediciones"]["media"])
+for key, value in best["mediciones"].items():
+    print(key, ":", value)
+extrinsic_metrics["Espectral"] = best["mediciones"]["media"]
 
-### Algritmo EM
-
-#%%
-
-# Generamos el modelo.
-model = GaussianMixture(n_components=5, max_iter=1000).fit(extrinsic_dataset)
-prediction = model.predict(extrinsic_dataset)
-
-# Guardamos la métricas.
-extrinsic_metrics['EM'] = calculate_extrinsic_metrics(extrinsic_classes, prediction)
-
-# Presentamos los clusters.
-plot_dataset(extrinsic_dataset, prediction)
+plot_dataset(extrinsic_dataset, best["prediction"])
 
 #%% md
 
@@ -606,12 +742,12 @@ plot_dataset(extrinsic_dataset, prediction)
 
 #%%
 
-display(pd.DataFrame(extrinsic_metrics))
+display(compare_metrics(extrinsic_metrics))
 
 #%% md
 
 """  #    
-blabla comparación dataset extrinseca
+Como se puede observar a continuación, si comparamos una media de las medidas calculadas, el algoritmo que mejor agrupa nuestros datos es K-medias.
 
 """  #
 
@@ -623,7 +759,7 @@ blabla comparación dataset extrinseca
 #%% md
 
 """  #    
-### Algoritmo k-means
+### Algoritmo 1: K medias
 #### Selección del número de clusters
 
 A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
@@ -632,7 +768,7 @@ A fin de implementar el modelo de K-Medios, comencemos por determinar la cantida
 
 #%%
 
-kmeans_plot_clusters_selection(intrinsic_dataset)
+plot_clusters_selection(intrinsic_dataset)
 
 #%% md
 
@@ -745,7 +881,7 @@ Este a veces la clava y a veces no. Hay que darle varias veces. Es curioso.
 
 #%%
 
-display(pd.DataFrame(intrinsic_metrics))
+display(add_metrics_mean(intrinsic_metrics))
 
 #%% md
 
