@@ -773,7 +773,7 @@ plot_clusters_selection(intrinsic_dataset)
 #%% md
 
 """  #    
-Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters
+Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters. Aunque estos valores son para escoger la cantidad óptima de centroides, son los valores sobre los que hemos realizado el análisis de todos los algoritmos utilizados.
 
 """  #
 
@@ -781,7 +781,7 @@ Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters
 
 """  #
 #### Ejecución del algoritmo
-Ejecutamos la predicción de k-means con 5 clusters y visualizamos la agrupación generada.
+Durante el análisis ejecutamos la predicción de k-means con 5, 6 y 7 clusters, y finalmente ejecutamos y visualizamos la agrupación generada para K = 7.
 
 
 """  #
@@ -789,7 +789,7 @@ Ejecutamos la predicción de k-means con 5 clusters y visualizamos la agrupació
 #%%
 
 # Generamos el modelo.
-model = KMeans(n_clusters=5).fit(intrinsic_dataset)
+model = KMeans(n_clusters=7).fit(intrinsic_dataset)
 prediction = model.predict(intrinsic_dataset)
 
 # Guardamos la métricas.
@@ -812,7 +812,7 @@ Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han
 #%%
 
 model = linkage(intrinsic_dataset, 'average')
-prediction = cut_tree(model, n_clusters=5).flatten()
+prediction = cut_tree(model, n_clusters=7).flatten()
 intrinsic_metrics['Jerárquico'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
 
 plot_dataset(intrinsic_dataset, prediction)
@@ -847,7 +847,7 @@ Buscando 5 clusters tambien lo hace bien.
 
 #%%
 
-h = 6
+h = 4
 model = MeanShift(bandwidth=h).fit(intrinsic_dataset)
 prediction = model.labels_
 intrinsic_metrics['Means-Shift'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
@@ -881,20 +881,38 @@ Este a veces la clava y a veces no. Hay que darle varias veces. Es curioso.
 
 #%%
 
-display(add_metrics_mean(intrinsic_metrics))
+display(pd.DataFrame(intrinsic_metrics))
 
 #%% md
 
-"""  #     
+"""  #   
+Inicialmente se analizan los algoritmos con un número de clústers distinto para cada uno, sin embargo de cara a la presentación final y conclusiones, escogemos la misma cantidad de grupos para poder comparar y en coherencia con lo que nos dice la visualización del dataset. Este valor será **7**, el cual además iguala bastante los indicadores.
+
+En las predicciones podemos obeservar las siguientes curiosidades. 
+> Entre el *Jerárquico aglomerativo* y el *Espectral* podemos observar en el resultado que sólo se diferencia en los puntos de mínima distancia inter-clúster, lo corroboran los indicadores de ambos, que son valores muy similares.
+
+> Los siguientes indicadores similares son *K-Means* y *EM*, principalmente la silueta, y aunque la predicción de clústers no coincide si que se observa que la separación entre muestras y clústers vecinos será parecido, tal y como divide en más de un grupo el conjunto de datos de mayor volumen inferior.
+
 Según el **coeficiente de silueta** tanto con el *Jerárquico* como con el *Means-Shift* obtenemos muestras más separadas de otros clústers vecinos. Pero los valores en el resto de algoritmos son bastante parecidos, y por tanto no es una característica claramente diferenciadora.
 
 Sin embargo, el indicador **Calinski-Harabasz** que relaciona la cohesión y separación de la siguiente forma: $\frac{𝑆𝑆𝐵/(𝑘−1)}
-{𝑆𝑆𝑊/(𝑛−𝑘)}$, nos da como mejor resultado de clasificación el obtenido con el algoritmo *K-Means*, seguido del *Espectral*.
+{𝑆𝑆𝑊/(𝑛−𝑘)}$, nos da como mejor resultado de clasificación el obtenido con el algoritmo *K-Means*, seguido del *EM*, esto tiene sentido ya que CH tiende a preferir soluciones de agrupación con agrupaciones que consisten en aproximadamente el mismo número de objetos.
 
-Finalmente el índice **Davies Bouldin**, señala al *Espectral* como el mejor agrupamiento, esto es debido a que se mide la proporción entre la suma de la dispersión dentro del clúster a la separación entre clústers, y por tanto apremia a resultados de agrupamiento en los que no tienen por qué ser similares los grupos entre si.
+Finalmente el índice **Davies Bouldin**, señala tanto al *Jerárquico* como al *Espectral* como los mejores agrupamientos, esto es debido a que se mide la proporción entre la suma de la dispersión dentro del clúster a la separación entre clústers, y por tanto apremia a resultados de agrupamiento en los que no tienen por qué ser similares los grupos entre si. Esto coincide con lo que nos dice nuestra intuición observando el conjunto de datos. 
 
 """  #
 
 #%% md
 
 # Conclusión
+
+#%% md
+
+""" #    
+En este trabajo hemos utilizado dos conjunto de datos con características diferentes, que nos han permitido obtener, con los mismos algoritmos, distintos resultados concluyentes.
+
+[...]
+
+Podremos por tanto concluir...
+
+""" #
