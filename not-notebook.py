@@ -881,7 +881,7 @@ Este a veces la clava y a veces no. Hay que darle varias veces. Es curioso.
 
 #%%
 
-display(add_metrics_mean(intrinsic_metrics))
+display(pd.DataFrame(intrinsic_metrics))
 
 #%% md
 
