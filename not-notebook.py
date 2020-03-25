@@ -39,9 +39,11 @@ warnings.filterwarnings("ignore")
 """  #    
 ### Funciones de apoyo
 #### Función de carga del dataset
-Se crea una función para simplificar la carga del dataset, que acepta varios parámetros:
+Preparamos una función genérica para para simplificar la descarga de los datasets y su preparación.     
+Ésta nos permite escoger los atributos que usaremos, así como extraer a un variable aparte las clases en caso de estar disponibles.
+Esta acepta varios parámetros:
  - dataset_url: cadena con la ruta al recurso desde donde cargar el dataset.
- - attributes: qué atributos usar del dataset (pocisión y nombre).
+ - attributes: atributos del dataset a usar (pocisión y nombre).
  - separator (opcional): caracter de división en el origen del dataset.
  - class_position (opcional): ubicación en el dataset de la clase.
 
@@ -103,12 +105,13 @@ def load_dataset(dataset_url: str, attributes: dict, separator: str = '\s+', cla
 
 """  #    
 #### Función de visualización
-Creamos también una función para simplificar la visualización del dataset.   
-Esta función presenta una combinación de dos en dos de todos los atributos, asi como adapta las dimensiones de la gráfica según la cantidad de sub-gráficas a presentar.
+Usaremos una función común para presentar los datos, tanto si están clasificados como si no.       
+Esta función presenta una combinación de dos en dos de todos los atributos, asi como adapta las dimensiones de la
+gráfica según la cantidad de sub-gráficas a presentar.
 
 Recibe dos parámetros:
- - atributos: El DataFrame con los atributos a representar
- - clase (opcional): El DataFrame con la clase de cada instancia
+ - dataset: El DataFrame con los atributos a representar
+ - classes (opcional): El DataFrame con la clase de cada instancia
 
 """  #
 
@@ -271,7 +274,7 @@ def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
 
 """  #    
 ### Funciones de cálculo de medidas intrínsecas
-Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o por lo menso en sklearn.
+Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o al menos en sklearn.
 
 """  #
 
@@ -341,6 +344,10 @@ def medida_I(dataset, prediction, centers, distance_function, p=1):
     ])
 
     return (num / den * distance_max) ** p
+
+
+#%%
+
 
 
 #%% md
@@ -504,7 +511,7 @@ plot_dataset(intrinsic_dataset)
 #%% md
 
 """  #    
-Destacamos que se podría clasificar con 4, 5 o con 7 clusters.
+Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #
 
@@ -512,7 +519,27 @@ Destacamos que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #    
 # Algoritmos
-## Selección de clusters
+Preparamos funciones 'herramienta' para cada algoritmo para poder analizarlos.
+
+"""  #
+
+#%% md
+
+## K-Means
+
+#%% md
+
+"""  #    
+Métrica R cadrado. No usamos directamente la de sklean al ésta necesitar la clases reales.
+Esta métrica nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
+
+"""  #
+
+#%% md
+
+"""  #    
+Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de cluters, de forma a escoger el número de clusters óptimo, usando la técnica del codo.
+
 """  #
 
 
@@ -797,7 +824,7 @@ plot_dataset(intrinsic_dataset, prediction)
 #%%
 
 K = 7
-knn = 30
+knn = 34
 model = SpectralClustering(
     n_clusters=K, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
 ).fit(intrinsic_dataset)
@@ -859,7 +886,12 @@ display(add_metrics_mean(intrinsic_metrics))
 #%% md
 
 """  #     
-blabla comparación dataset intrinseco
+Según el **coeficiente de silueta** tanto con el *Jerárquico* como con el *Means-Shift* obtenemos muestras más separadas de otros clústers vecinos. Pero los valores en el resto de algoritmos son bastante parecidos, y por tanto no es una característica claramente diferenciadora.
+
+Sin embargo, el indicador **Calinski-Harabasz** que relaciona la cohesión y separación de la siguiente forma: $\frac{𝑆𝑆𝐵/(𝑘−1)}
+{𝑆𝑆𝑊/(𝑛−𝑘)}$, nos da como mejor resultado de clasificación el obtenido con el algoritmo *K-Means*, seguido del *Espectral*.
+
+Finalmente el índice **Davies Bouldin**, señala al *Espectral* como el mejor agrupamiento, esto es debido a que se mide la proporción entre la suma de la dispersión dentro del clúster a la separación entre clústers, y por tanto apremia a resultados de agrupamiento en los que no tienen por qué ser similares los grupos entre si.
 
 """  #
 
