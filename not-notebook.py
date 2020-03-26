@@ -151,9 +151,7 @@ def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
 #%% md
 
 """  #    
-## Métricas
-### Funciones de cálculo de medidas extrínsecas
-Además usar métricas de evaluación disponibles en python, aplicaremos también funciones de métricas customizadas vistas en clase, definadas a continuación:
+### Funciones propias de cálculo de medidas extrínsecas:
 
 """  #
 
@@ -167,9 +165,6 @@ def matriz_confusion(cat_real, cat_pred):
                      for j in np.arange(clusts.size)]
                     for i in np.arange(cats.size)])
     return (mat)
-
-
-#%%
 
 def medida_error(mat):
     assign = np.sum([np.max(mat[l, :]) for l in np.arange(mat.shape[0])])
@@ -191,9 +186,6 @@ def medida_pureza(mat):
         for k in np.arange(mat.shape[1])
     ])
 
-
-#%%
-
 def medida_f1_especifica(mat, l, k):
     prec = medida_precision(mat, l, k)
     rec = medida_recall(mat, l, k)
@@ -214,9 +206,6 @@ def medida_f1(mat):
     ])
     return assign
 
-
-#%%
-
 def medida_entropia(mat):
     totales = np.sum(mat, axis=0) / float(np.sum(mat))
     relMat = mat / np.sum(mat, axis=0)
@@ -230,7 +219,6 @@ def medida_entropia(mat):
         ])
         for k in np.arange(mat.shape[1])
     ])
-
 
 #%% md
 
@@ -273,9 +261,9 @@ def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
         'Fowlkes-Mallows': metrics.fowlkes_mallows_score(real_classes, predicted_classes),
         'Silhouette': metrics.silhouette_score(dataset, predicted_classes, metric='euclidean'),
         'Calinski-Harabasz': metrics.calinski_harabasz_score(dataset, predicted_classes),
-        'Davies-Bouldin': davies_bouldin_score(dataset, predicted_classes)
+        'Davies-Bouldin': davies_bouldin_score(dataset, predicted_classes),
+        'media': (medida_pureza(confusion_matrix)+medida_f1(confusion_matrix)+metrics.mutual_info_score(real_classes, predicted_classes)+metrics.adjusted_rand_score(real_classes, predicted_classes)+metrics.homogeneity_score(real_classes, predicted_classes)+metrics.completeness_score(real_classes, predicted_classes)+metrics.v_measure_score(real_classes, predicted_classes)+metrics.fowlkes_mallows_score(real_classes, predicted_classes))/8
     }
-
 
 #%% md
 
@@ -300,6 +288,19 @@ def calculate_intrinsic_metrics(dataset, prediction):
         'Davies Bouldin': metrics.davies_bouldin_score(dataset, prediction)
     }
 
+def r2_score(dataset, prediction, centroids):
+    """
+    An intrinsic R² score metric, as sklearn one is extrinsic only.
+    """
+    attributes_mean = np.mean(dataset, axis=0)
+    labels = np.sort(np.unique(prediction))
+    numerator = np.sum([
+        np.sum(np.sum(dataset[prediction == label] - centroids[label], axis=1) ** 2)
+        for label in labels
+    ])
+    denominator = np.sum(np.sum(dataset - attributes_mean, 1) ** 2)
+
+    return 1 - numerator / denominator
 
 #%% md
 
@@ -315,40 +316,14 @@ Finalmente se crea una función que simplifique la comparación de métricas ent
 
 def compare_metrics(metrics_data: dict) -> pd.DataFrame:
     output = pd.DataFrame(metrics_data)
-    output.loc['mean'] = output.mean(axis=0)
-
     return output
-
 
 #%% md
 
 """ #    
-### Función de selcción de número de clusters
-Para poder escoger el número optimode clusters preparamos una función que presentra gráficamente la evolución de las métricas R² y Silueta según el número de clusters, y poder escoger así el número óptimo de clusters usando la técnica del codo.      
-
-Aplicamos la función de R cuadrado vista en clase al esta ser compatible con datasets intrísecos mientras que la disponible
-en sklearn requiere disponer de las clases reales.    
-Esta métrica nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
+Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de clusters, para poder escoger el número de clusters óptimo usando la técnica del codo.
 
 """  #
-
-
-#%%
-
-def r2_score(dataset, prediction, centroids):
-    """
-    An intrinsic R² score metric, as sklearn one is extrinsic only.
-    """
-    attributes_mean = np.mean(dataset, axis=0)
-    labels = np.sort(np.unique(prediction))
-    numerator = np.sum([
-        np.sum(np.sum(dataset[prediction == label] - centroids[label], axis=1) ** 2)
-        for label in labels
-    ])
-    denominator = np.sum(np.sum(dataset - attributes_mean, 1) ** 2)
-
-    return 1 - numerator / denominator
-
 
 #%%
 
@@ -375,10 +350,9 @@ def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
     ax[1].set_xlabel("Número de clústeres")
     ax[1].set_ylabel("Medida de R cuadrado")
 
-
 #%% md
 
-## Selección de los datasets
+## Selección
 
 #%% md
 
@@ -399,7 +373,7 @@ El origen de este dataset se remonta a datos usados en 1983 por la <i>American S
      - origin (origen): discreto multi evaluado.    
      - car name (nombre del coche): cadena (único para cada instancia)    
 
-Para el estudio que nos ocupa vamos a intentar **predecir el número de cilindros** basándonos en la cilindrada y la potencia.
+Para el estudio que nos ocupa vamos a predecir el número de cilindros basándonos en el consumo, la cilindrada y la potencia.
 
 """  #
 
@@ -454,82 +428,25 @@ plot_dataset(extrinsic_dataset, extrinsic_classes)
 
 #%% md
 
-"""  #    
-## Dataset intrínseca
-El dataset intrínseca **Aggregations** está generado de manera artificial por: *A. Gionis, H. Mannila, and P. Tsaparas, Clustering aggregation. ACM Transactions on Knowledge Discovery from Data (TKDD), 2007*
-
-
-Este dataset está compuesto por 788 observaciones de 2 variables que abarcan un amplio rango numérico.
-
-
-Cargamos nuestro dataset (*intrinsic_dataset*):
-
-"""  #
-
-#%%
-
-# Cargamos el dataset.
-dataset_url = 'http://cs.joensuu.fi/sipu/datasets/Aggregation.txt'
-attributes = {0: 'dim 1', 1: 'dim 2'}
-_, intrinsic_dataset = load_dataset(dataset_url, attributes)
-
-# Soporte para las métricas
-intrinsic_metrics = {}
-
-#%% md
-
-"""  #    
-Visualizamos el dataset:
-
-"""  #
-
-#%%
-
-plot_dataset(intrinsic_dataset)
-
-#%% md
-
-"""  #    
-Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, 
-lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, 
-y parece que se podría clasificar con 4, 5 o con 7 clusters.
-
-"""  #
-
-#%% md
-
-"""  #    
+""" #    
 # Análisis dataset extrínseca
-### Selección del número de clusters
 
-A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a 
-partir del Método del Codo.
-
-"""  #
-
-#%%
-
-plot_clusters_selection(extrinsic_dataset)
-
-#%% md
-
-"""  #    
-Observando las gráficas anteriores destaca como número de clusters el 3, aunque posiblement 5 clusters igualemente.    
-Optamos por un número óptimo de clústers para K-means de 3 para este dataset.    
+Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
+     
 Definimos un variable con el número de cluster que usaremos para el análisis:
-
 """  #
 
 #%%
 
 extrinsic_clusters = 3
 
+#%%
+## Algoritmos
+
 #%% md
 
 ### Algoritmo 1: K medias
 
-
-#%%
 
 # Generamos el modelo.
 model = KMeans(n_clusters=extrinsic_clusters).fit(extrinsic_dataset)
@@ -641,20 +558,23 @@ def repetir_espectral(v, r):
     return mejor
 
 
-vecinos = 50
-repeticiones = 20
+vecinos = 30
+repeticiones = 10
 best = repetir_espectral(vecinos, repeticiones)
 print("El mejor espectral encontrado es con", best["vecinos"], "vecinos y da una media de", best["mediciones"]["media"])
-for key, value in best["mediciones"].items():
-    print(key, ":", value)
-extrinsic_metrics["Espectral"] = best["mediciones"]["media"]
+# for key, value in best["mediciones"].items():
+#     print(key, ":", value)
+extrinsic_metrics["Espectral"] = best["mediciones"]
 
 plot_dataset(extrinsic_dataset, best["prediction"])
 
 #%% md
 
-### Comparación algoritmos
+## Comparación algoritmos
 
+"""  #    
+Vamos pues a obtener una comparativa de los algoritmos para nuestro dataset extrínseco:
+"""  #
 #%%
 
 display(compare_metrics(extrinsic_metrics))
@@ -662,9 +582,52 @@ display(compare_metrics(extrinsic_metrics))
 #%% md
 
 """  #    
-Por lo que se observa, basándonos en la media calculada, que el <b>mejor algoritmo para el agrupamiento de nuestros 
-datos es K-means</b>, con poca diferencia respecto al agrupamiento jerárquico escogido y seguidos de cerca por 
-desplazamiento de medias.
+Por lo que se observa, basándonos en la media calculada, que el <b>mejor algoritmo para el agrupamiento de nuestros datos es el de agrupamiento jerárquico, prácticamente igualado a K Medias</b>, seguidos por desplazamiento de medias y DBSCAN.
+
+El espectral, en cambio, no resulta muy apropiado para este caso.
+"""  #
+
+#%% md
+
+"""  #    
+### Dataset intrínseca
+El dataset intrínseca **Aggregations** está generado de manera artificial por: *A. Gionis, H. Mannila, and P. Tsaparas, Clustering aggregation. ACM Transactions on Knowledge Discovery from Data (TKDD), 2007*
+
+
+Este dataset está compuesto por 788 observaciones de 2 variables que abarcan un amplio rango numérico. En el conjunto de datos existen entre 5 a 7 grupos que se distribuyen en zonas particulares del rango de valores de las variables.
+
+
+Cargamos nuestro dataset (*intrinsic_dataset*):
+
+"""  #
+
+#%%
+
+# Cargamos el dataset.
+dataset_url = 'http://cs.joensuu.fi/sipu/datasets/Aggregation.txt'
+attributes = {0: 'dim 1', 1: 'dim 2'}
+_, intrinsic_dataset = load_dataset(dataset_url, attributes)
+
+# Soporte para las métricas
+intrinsic_metrics = {}
+
+#%% md
+
+"""  #    
+Visualizamos el dataset en 2-D:
+
+"""  #
+
+#%%
+
+plot_dataset(intrinsic_dataset)
+
+#%% md
+
+"""  #    
+Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, 
+lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, 
+y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #
 
@@ -723,7 +686,7 @@ plot_dataset(intrinsic_dataset, prediction)
 #%% md
 
 """  #    
-Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han quedado a medias.
+Vemos que buena parte de los grupos se han identificado correctamente, o con mínimas interferencias (el grupo amarillo \"invade\" al azul oscuro en dos puntos). Sin embargo, los dos grupos pequeños de abajo a la izquierda los considera uno, junto con algunos puntos del grupo grande a su lado, que a su vez está dividido en dos.
 
 """  #
 
@@ -742,6 +705,10 @@ intrinsic_metrics['Jerárquico'] = calculate_intrinsic_metrics(intrinsic_dataset
 
 # Presentamos los clusters.
 plot_dataset(intrinsic_dataset, prediction)
+
+#%% md
+
+El resultado de este algoritmo de agrupamiento es excelente, acertando completamente los 7 grupos que se adivinan visualmente.AQUI TENDREMOS QUE COMENTAR ALGO
 
 #%% md
 
@@ -786,6 +753,10 @@ intrinsic_metrics['Means-Shift'] = calculate_intrinsic_metrics(intrinsic_dataset
 
 # Presentamos los clusters.
 plot_dataset(intrinsic_dataset, prediction)
+
+#%% md
+
+Este algoritmo resuelve casi correctamente el agrupamiento, identificando los 7 grupos pero asignando mal algunos puntos, incluyendo en los grupos pequeños puntos de los grupos grandes más cercanos. Es un problema conocido del algoritmo, al trabajar sobre una media general para todos los agrupamientos.AQUI TAMBIÉN TENDREMOS QUE COMENTAR ALGO
 
 #%% md
 
@@ -840,14 +811,35 @@ Finalmente el índice **Davies Bouldin**, señala tanto al *Jerárquico* como al
 #%% md
 
 # Conclusión
+Veamos los resultados de uno y otro análisis:
+
+#%%
+
+def simplificar_extrinsic():
+    e_m = []
+    for key in extrinsic_metrics:
+        k = {}
+        for metrica in extrinsic_metrics[key]:
+            if metrica in ['Silhouette','Calinski-Harabasz','Davies-Bouldin']:
+                k[metrica] = extrinsic_metrics[key][metrica]
+        e_m.append(k)
+    e_m_df = pd.DataFrame(e_m).transpose()
+    e_m_df.columns = ['k-means','Jerárquico','DBSCAN','Means-Shift','Espectral']
+    col_list = list(e_m_df)
+    col_list[2], col_list[4] = col_list[4], col_list[2]
+    e_m_df.columns = col_list
+    return e_m_df
+
+print("Resultados del dataset intrínseco:")
+display(pd.DataFrame(intrinsic_metrics))
+print("Resultados del dataset extrínseco:")
+display(simplificar_extrinsic())
 
 #%% md
 
 """ #    
-En este trabajo hemos utilizado dos conjunto de datos con características diferentes, que nos han permitido obtener, con los mismos algoritmos, distintos resultados concluyentes.
+Se aprecia una diferencia sustancial entre los resultados según si se conoce o no el valor de la clase, muy homogéneos en caso de Silhouette y con una sola excepción (el Espectral) para la métrica de Calinski Harabasz.
 
-[...]
-
-Podremos por tanto concluir...
+Sin embargo, la métrica Davis-Bouldin parece bastante independiente del hecho de que el dataset sea intrínseco o extrínseco.
 
 """  #
