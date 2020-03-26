@@ -323,7 +323,7 @@ def compare_metrics(metrics_data: dict) -> pd.DataFrame:
 #%% md
 
 """ #    
-### Función de selcción de número de clusters
+### Función de selección de número de clusters
 Para poder escoger el número optimode clusters preparamos una función que presentra gráficamente la evolución de las métricas R² y Silueta según el número de clusters, y poder escoger así el número óptimo de clusters usando la técnica del codo.      
 
 Aplicamos la función de R cuadrado vista en clase al esta ser compatible con datasets intrísecos mientras que la disponible
