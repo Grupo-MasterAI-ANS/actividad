@@ -10,7 +10,6 @@
 
 #%% md
 
-# Datasets
 ## Preparación
 ### Librerías
 
@@ -166,6 +165,7 @@ def matriz_confusion(cat_real, cat_pred):
                     for i in np.arange(cats.size)])
     return (mat)
 
+
 def medida_error(mat):
     assign = np.sum([np.max(mat[l, :]) for l in np.arange(mat.shape[0])])
     return 1 - assign / float(np.sum(mat))
@@ -185,6 +185,7 @@ def medida_pureza(mat):
         totales[k] * np.max(mat[:, k] / float(np.sum(mat[:, k])))
         for k in np.arange(mat.shape[1])
     ])
+
 
 def medida_f1_especifica(mat, l, k):
     prec = medida_precision(mat, l, k)
@@ -206,6 +207,7 @@ def medida_f1(mat):
     ])
     return assign
 
+
 def medida_entropia(mat):
     totales = np.sum(mat, axis=0) / float(np.sum(mat))
     relMat = mat / np.sum(mat, axis=0)
@@ -219,6 +221,7 @@ def medida_entropia(mat):
         ])
         for k in np.arange(mat.shape[1])
     ])
+
 
 #%% md
 
@@ -262,8 +265,14 @@ def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
         'Silhouette': metrics.silhouette_score(dataset, predicted_classes, metric='euclidean'),
         'Calinski-Harabasz': metrics.calinski_harabasz_score(dataset, predicted_classes),
         'Davies-Bouldin': davies_bouldin_score(dataset, predicted_classes),
-        'media': (medida_pureza(confusion_matrix)+medida_f1(confusion_matrix)+metrics.mutual_info_score(real_classes, predicted_classes)+metrics.adjusted_rand_score(real_classes, predicted_classes)+metrics.homogeneity_score(real_classes, predicted_classes)+metrics.completeness_score(real_classes, predicted_classes)+metrics.v_measure_score(real_classes, predicted_classes)+metrics.fowlkes_mallows_score(real_classes, predicted_classes))/8
+        'media': (medida_pureza(confusion_matrix) + medida_f1(confusion_matrix) + metrics.mutual_info_score(
+            real_classes, predicted_classes) + metrics.adjusted_rand_score(real_classes,
+                                                                           predicted_classes) + metrics.homogeneity_score(
+            real_classes, predicted_classes) + metrics.completeness_score(real_classes,
+                                                                          predicted_classes) + metrics.v_measure_score(
+            real_classes, predicted_classes) + metrics.fowlkes_mallows_score(real_classes, predicted_classes)) / 8
     }
+
 
 #%% md
 
@@ -288,6 +297,7 @@ def calculate_intrinsic_metrics(dataset, prediction):
         'Davies Bouldin': metrics.davies_bouldin_score(dataset, prediction)
     }
 
+
 def r2_score(dataset, prediction, centroids):
     """
     An intrinsic R² score metric, as sklearn one is extrinsic only.
@@ -301,6 +311,7 @@ def r2_score(dataset, prediction, centroids):
     denominator = np.sum(np.sum(dataset - attributes_mean, 1) ** 2)
 
     return 1 - numerator / denominator
+
 
 #%% md
 
@@ -318,12 +329,14 @@ def compare_metrics(metrics_data: dict) -> pd.DataFrame:
     output = pd.DataFrame(metrics_data)
     return output
 
+
 #%% md
 
 """ #    
 Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de clusters, para poder escoger el número de clusters óptimo usando la técnica del codo.
 
 """  #
+
 
 #%%
 
@@ -350,14 +363,12 @@ def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
     ax[1].set_xlabel("Número de clústeres")
     ax[1].set_ylabel("Medida de R cuadrado")
 
-#%% md
-
-## Selección
 
 #%% md
 
 """  #    
-### Dataset extrínseca
+# Dataset extrínseca
+
 El origen de este dataset se remonta a datos usados en 1983 por la <i>American Statistical Association Exposition</i> y que se conservan en la Universidad de Carnegie Mellon, al que le faltan 8 instancias que se eliminaron para homogeneizar el dataset, ya que carecían del campo mpg.
 
  El dataset consta de:
@@ -429,24 +440,23 @@ plot_dataset(extrinsic_dataset, extrinsic_classes)
 #%% md
 
 """ #    
-# Análisis dataset extrínseca
+## Análisis dataset extrínseca
 
 Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
-     
+
 Definimos un variable con el número de cluster que usaremos para el análisis:
+
 """  #
 
 #%%
 
 extrinsic_clusters = 3
 
-#%%
-## Algoritmos
-
 #%% md
 
 ### Algoritmo 1: K medias
 
+#%%
 
 # Generamos el modelo.
 model = KMeans(n_clusters=extrinsic_clusters).fit(extrinsic_dataset)
@@ -460,7 +470,7 @@ plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-### ### Algoritmo 2: jerárquico aglomerativo
+### Algoritmo 2: jerárquico aglomerativo
 
 #%%
 
@@ -575,6 +585,7 @@ plot_dataset(extrinsic_dataset, best["prediction"])
 """  #    
 Vamos pues a obtener una comparativa de los algoritmos para nuestro dataset extrínseco:
 """  #
+
 #%%
 
 display(compare_metrics(extrinsic_metrics))
@@ -582,7 +593,7 @@ display(compare_metrics(extrinsic_metrics))
 #%% md
 
 """  #    
-Por lo que se observa, basándonos en la media calculada, que el <b>mejor algoritmo para el agrupamiento de nuestros datos es el de agrupamiento jerárquico, prácticamente igualado a K Medias</b>, seguidos por desplazamiento de medias y DBSCAN.
+Por lo que se observa, basándonos en la media calculada, el <b>mejor algoritmo para el agrupamiento de nuestros datos es el de agrupamiento jerárquico, prácticamente igualado a K Medias</b>, seguidos por desplazamiento de medias y DBSCAN.
 
 El espectral, en cambio, no resulta muy apropiado para este caso.
 """  #
@@ -590,7 +601,7 @@ El espectral, en cambio, no resulta muy apropiado para este caso.
 #%% md
 
 """  #    
-### Dataset intrínseca
+# Dataset intrínseca
 El dataset intrínseca **Aggregations** está generado de manera artificial por: *A. Gionis, H. Mannila, and P. Tsaparas, Clustering aggregation. ACM Transactions on Knowledge Discovery from Data (TKDD), 2007*
 
 
@@ -633,14 +644,12 @@ y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
 #%% md
 
-# Análisis dataset intrínseca
-## Algoritmos
+## Análisis dataset intrínseca
 
 #%% md
 
 """  #    
-### Algoritmo 1: K medias
-#### Selección del número de clusters
+### Selección del número de clusters
 
 A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
 
@@ -666,7 +675,8 @@ intrinsic_clusters = 7
 #%% md
 
 """  #
-#### Ejecución del algoritmo
+
+### Algoritmo 1: K medias
 Durante el análisis ejecutamos la predicción de k-means con 5, 6 y 7 clusters, y finalmente ejecutamos y visualizamos la agrupación generada para K = 7.
 
 """  #
@@ -692,7 +702,7 @@ Vemos que buena parte de los grupos se han identificado correctamente, o con mí
 
 #%% md
 
-### Algoritmo Jerárquico Aglomerativo
+### Algoritmo 2: Jerárquico Aglomerativo
 
 #%%
 
@@ -708,11 +718,13 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-El resultado de este algoritmo de agrupamiento es excelente, acertando completamente los 7 grupos que se adivinan visualmente.AQUI TENDREMOS QUE COMENTAR ALGO
+"""  #    
+El resultado de este algoritmo de agrupamiento es excelente, acertando completamente los 7 grupos que se adivinan visualmente.
 
+"""  #
 #%% md
 
-### Algoritmo Agrupamiento espectral
+### Algoritmo 3: Agrupamiento espectral
 
 #%%
 
@@ -739,7 +751,7 @@ Buscando 5 clusters también lo hace bien.
 
 #%% md
 
-### Algoritmo Mean Shift
+### Algoritmo 4: Mean Shift
 
 #%%
 
@@ -756,16 +768,18 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-Este algoritmo resuelve casi correctamente el agrupamiento, identificando los 7 grupos pero asignando mal algunos puntos, incluyendo en los grupos pequeños puntos de los grupos grandes más cercanos. Es un problema conocido del algoritmo, al trabajar sobre una media general para todos los agrupamientos.AQUI TAMBIÉN TENDREMOS QUE COMENTAR ALGO
+"""  #    
+Este algoritmo resuelve casi correctamente el agrupamiento, identificando los 7 grupos pero asignando mal algunos puntos, incluyendo en los grupos pequeños puntos de los grupos grandes más cercanos. Es un problema conocido del algoritmo, al trabajar sobre una media general para todos los agrupamientos.
 
+"""  #
 #%% md
 
-### Algoritmo EM
+### Algoritmo 5: EM
 
 #%%
 
 # Generamos el modelo.
-model = GaussianMixture(n_components=intrinsic_clusters, max_iter=1000).fit(intrinsic_dataset)
+model = GaussianMixture(n_components=intrinsic_clusters, max_iter=1000, random_state=8).fit(intrinsic_dataset)
 prediction = model.predict(intrinsic_dataset)
 
 # Guardamos la métricas.
@@ -777,13 +791,13 @@ plot_dataset(intrinsic_dataset, prediction)
 #%% md
 
 """  #    
-Este algoritmo tiene una gran variabilidad, resultando óptimo en ocasiones y alejándose de ese resultado en otras.
-
+Este algoritmo tiene una gran variabilidad, resultando óptimo en ocasiones y alejándose de ese resultado en otras.     
+Hemos dejado fijado el *random state* de tal forma que visualicemos un caso de agrupación perfecta, aunque en la mayoría de los casos no logra este nivel de agrupación.
 """  #
 
 #%% md
 
-### Comparación algoritmos
+## Comparación algoritmos
 
 #%%
 
@@ -810,8 +824,12 @@ Finalmente el índice **Davies Bouldin**, señala tanto al *Jerárquico* como al
 
 #%% md
 
+"""  #    
 # Conclusión
 Veamos los resultados de uno y otro análisis:
+
+"""  #
+
 
 #%%
 
@@ -820,15 +838,16 @@ def simplificar_extrinsic():
     for key in extrinsic_metrics:
         k = {}
         for metrica in extrinsic_metrics[key]:
-            if metrica in ['Silhouette','Calinski-Harabasz','Davies-Bouldin']:
+            if metrica in ['Silhouette', 'Calinski-Harabasz', 'Davies-Bouldin']:
                 k[metrica] = extrinsic_metrics[key][metrica]
         e_m.append(k)
     e_m_df = pd.DataFrame(e_m).transpose()
-    e_m_df.columns = ['k-means','Jerárquico','DBSCAN','Means-Shift','Espectral']
+    e_m_df.columns = ['k-means', 'Jerárquico', 'DBSCAN', 'Means-Shift', 'Espectral']
     col_list = list(e_m_df)
     col_list[2], col_list[4] = col_list[4], col_list[2]
     e_m_df.columns = col_list
     return e_m_df
+
 
 print("Resultados del dataset intrínseco:")
 display(pd.DataFrame(intrinsic_metrics))
