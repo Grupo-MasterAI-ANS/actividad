@@ -1,12 +1,12 @@
 #%% md
 
-"""  #    
+
 # Trabajo final de Aprendizaje No Supervisado
 - **Coordinador**: Adrien Felipe
 - **Secretaria**: Carolina Martínez
 - **Revisor**: Enrique Navarro
 
-"""  #
+
 
 #%% md
 
@@ -35,7 +35,7 @@ warnings.filterwarnings("ignore")
 
 #%% md
 
-"""  #    
+
 ### Funciones de apoyo
 #### Función de carga del dataset
 Preparamos una función genérica para para simplificar la descarga de los datasets y su preparación.     
@@ -47,7 +47,7 @@ Descripción de sus parámetros:
  - separator (opcional): caracter de división en el origen del dataset.
  - class_position (opcional): ubicación en el dataset de la clase.
 
-"""  #
+
 
 
 #%%
@@ -103,7 +103,7 @@ def load_dataset(dataset_url: str, attributes: dict, separator: str = '\s+', cla
 
 #%% md
 
-"""  #    
+
 #### Función de visualización
 Usaremos una función común para presentar los datos, tanto si están clasificados como si no.       
 Esta función presenta una combinación de dos en dos de todos los atributos, asi como adapta las dimensiones de la
@@ -113,7 +113,7 @@ Recibe dos parámetros:
  - dataset: El DataFrame con los atributos a representar
  - classes (opcional): El DataFrame con la clase de cada instancia
 
-"""  #
+
 
 
 #%%
@@ -149,10 +149,10 @@ def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
 
 #%% md
 
-"""  #    
+
 ### Funciones propias de cálculo de medidas extrínsecas:
 
-"""  #
+
 
 
 #%%
@@ -225,7 +225,7 @@ def medida_entropia(mat):
 
 #%% md
 
-"""  #     
+
 #### Función de cálculo de las medidas extrínsecas
 Con la intensión de simplificar y unificar la captura de las métricas de valoración aplicadas a cada algoritmo, preparamos una función que calcula varias medidas cualitativas del agrupamiento, de forma a poder compararlas.    
 
@@ -243,7 +243,7 @@ Con la intensión de simplificar y unificar la captura de las métricas de valor
  Para simplificar la comparación de resultados, se crea una media de algunos de los parámetros, que son compatibles por
  puntuar con un máximo de 1. Nos basaremos en ella para considerar qué algoritmo ofrece mejor resultado.
 
-"""  #
+
 
 
 #%%
@@ -276,7 +276,7 @@ def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
 
 #%% md
 
-"""  #    
+
 ### Funciones de cálculo de medidas intrínsecas
 En el caso de la evalución cualitativa del agrupamiento de los algoritmos intrínsecas, usaremos exclusivamente métricas disponibles en sklearn:
  - Silhouette
@@ -285,7 +285,7 @@ En el caso de la evalución cualitativa del agrupamiento de los algoritmos intr�
 
 Debido a que RMSSTD, R² y la Medida I requieren de centroides, que no todos los algoritmos utilizan, decidimos prescindir de ellas.
 
-"""  #
+
 
 
 #%%
@@ -315,12 +315,12 @@ def r2_score(dataset, prediction, centroids):
 
 #%% md
 
-""" #    
+
 ### Función para presentar las métricas
 
 Finalmente se crea una función que simplifique la comparación de métricas entre distintos algoritmos.
 
-"""  #
+
 
 
 #%%
@@ -332,10 +332,10 @@ def compare_metrics(metrics_data: dict) -> pd.DataFrame:
 
 #%% md
 
-""" #    
+
 Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de clusters, para poder escoger el número de clusters óptimo usando la técnica del codo.
 
-"""  #
+
 
 
 #%%
@@ -366,7 +366,7 @@ def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
 
 #%% md
 
-"""  #    
+
 # Dataset extrínseca
 
 El origen de este dataset se remonta a datos usados en 1983 por la <i>American Statistical Association Exposition</i> y que se conservan en la Universidad de Carnegie Mellon, al que le faltan 8 instancias que se eliminaron para homogeneizar el dataset, ya que carecían del campo mpg.
@@ -386,7 +386,7 @@ El origen de este dataset se remonta a datos usados en 1983 por la <i>American S
 
 Para el estudio que nos ocupa vamos a predecir el número de cilindros basándonos en el consumo, la cilindrada y la potencia.
 
-"""  #
+
 
 #%%
 
@@ -400,11 +400,11 @@ extrinsic_metrics = {}
 
 #%% md
 
-"""  #    
+
 Se descartan el resto de valores para mantener baja la dimensión del vector descriptor y simplificar así los cálculos.
 Los datos vienen casi listos para trabajar con ellos. No se detectan campos vacíos:
 
-"""  #
+
 
 #%%
 
@@ -412,12 +412,12 @@ print(extrinsic_dataset.isnull().any())
 
 #%% md
 
-""" #    
+
 Sin embargo, en la potencia existe un valor anómalo, un "?" usado donde se desconocía el dato, por lo que se ha incorporado a la función de carga de datos un filtro para eliminarlo.
 
 Vamos a observar la distribución de nuestra clase:
 
-"""  #
+
 
 #%%
 
@@ -425,13 +425,13 @@ sns.distplot(extrinsic_classes)
 
 #%% md
 
-""" #    
+
 Se observa una marcada preponderancia de los valores de cilindros 4,6 y 8. Asumimos que probablemente las instancias que no pertenezcan a estos tres grupos se agrupen dentro de ellos lo que va a conllevar un pequeño error de base al escoger agrupamientos.
 
 Y la relación entre los atributos:
 
 
-"""  #
+
 
 #%%
 
@@ -439,14 +439,14 @@ plot_dataset(extrinsic_dataset, extrinsic_classes)
 
 #%% md
 
-""" #    
+
 ## Análisis dataset extrínseca
 
 Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
 
 Definimos un variable con el número de cluster que usaremos para el análisis:
 
-"""  #
+
 
 #%%
 
@@ -582,9 +582,9 @@ plot_dataset(extrinsic_dataset, best["prediction"])
 
 ## Comparación algoritmos
 
-"""  #    
+
 Vamos pues a obtener una comparativa de los algoritmos para nuestro dataset extrínseco:
-"""  #
+
 
 #%%
 
@@ -592,15 +592,15 @@ display(compare_metrics(extrinsic_metrics))
 
 #%% md
 
-"""  #    
+
 Por lo que se observa, basándonos en la media calculada, el <b>mejor algoritmo para el agrupamiento de nuestros datos es el de agrupamiento jerárquico, prácticamente igualado a K Medias</b>, seguidos por desplazamiento de medias y DBSCAN.
 
 El espectral, en cambio, no resulta muy apropiado para este caso.
-"""  #
+
 
 #%% md
 
-"""  #    
+
 # Dataset intrínseca
 El dataset intrínseca **Aggregations** está generado de manera artificial por: *A. Gionis, H. Mannila, and P. Tsaparas, Clustering aggregation. ACM Transactions on Knowledge Discovery from Data (TKDD), 2007*
 
@@ -610,7 +610,7 @@ Este dataset está compuesto por 788 observaciones de 2 variables que abarcan un
 
 Cargamos nuestro dataset (*intrinsic_dataset*):
 
-"""  #
+
 
 #%%
 
@@ -624,10 +624,10 @@ intrinsic_metrics = {}
 
 #%% md
 
-"""  #    
+
 Visualizamos el dataset en 2-D:
 
-"""  #
+
 
 #%%
 
@@ -635,12 +635,12 @@ plot_dataset(intrinsic_dataset)
 
 #%% md
 
-"""  #    
+
 Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, 
 lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, 
 y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
-"""  #
+
 
 #%% md
 
@@ -648,12 +648,12 @@ y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
 #%% md
 
-"""  #    
+
 ### Selección del número de clusters
 
 A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
 
-"""  #
+
 
 #%%
 
@@ -661,12 +661,12 @@ plot_clusters_selection(intrinsic_dataset)
 
 #%% md
 
-"""  #    
+
 Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters. Aunque estos valores son para escoger la cantidad óptima de centroides, son los valores sobre los que hemos realizado el análisis de todos los algoritmos utilizados.
 
 Usamos un variable con el número buscado de clusters:
 
-"""  #
+
 
 #%%
 
@@ -674,12 +674,12 @@ intrinsic_clusters = 7
 
 #%% md
 
-"""  #
+
 
 ### Algoritmo 1: K medias
 Durante el análisis ejecutamos la predicción de k-means con 5, 6 y 7 clusters, y finalmente ejecutamos y visualizamos la agrupación generada para K = 7.
 
-"""  #
+
 
 #%%
 
@@ -695,10 +695,10 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-"""  #    
+
 Vemos que buena parte de los grupos se han identificado correctamente, o con mínimas interferencias (el grupo amarillo \"invade\" al azul oscuro en dos puntos). Sin embargo, los dos grupos pequeños de abajo a la izquierda los considera uno, junto con algunos puntos del grupo grande a su lado, que a su vez está dividido en dos.
 
-"""  #
+
 
 #%% md
 
@@ -718,10 +718,10 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-"""  #    
+
 El resultado de este algoritmo de agrupamiento es excelente, acertando completamente los 7 grupos que se adivinan visualmente.
 
-"""  #
+
 #%% md
 
 ### Algoritmo 3: Agrupamiento espectral
@@ -743,11 +743,11 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-"""  #    
+
 El jerárquico con 30 KNN resuelve bien la clusterización con 7 grupos, si se reduce no lo hace tan bien, y  partir de 50 tampoco. Hay que encontar el valor correcto.    
 Buscando 5 clusters también lo hace bien.
 
-"""  #
+
 
 #%% md
 
@@ -768,10 +768,10 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-"""  #    
+
 Este algoritmo resuelve casi correctamente el agrupamiento, identificando los 7 grupos pero asignando mal algunos puntos, incluyendo en los grupos pequeños puntos de los grupos grandes más cercanos. Es un problema conocido del algoritmo, al trabajar sobre una media general para todos los agrupamientos.
 
-"""  #
+
 #%% md
 
 ### Algoritmo 5: EM
@@ -790,10 +790,10 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-"""  #    
+
 Este algoritmo tiene una gran variabilidad, resultando óptimo en ocasiones y alejándose de ese resultado en otras.     
 Hemos dejado fijado el *random state* de tal forma que visualicemos un caso de agrupación perfecta, aunque en la mayoría de los casos no logra este nivel de agrupación.
-"""  #
+
 
 #%% md
 
@@ -805,7 +805,7 @@ display(pd.DataFrame(intrinsic_metrics))
 
 #%% md
 
-"""  #   
+
 Inicialmente se analizan los algoritmos con un número de clústers distinto para cada uno, sin embargo de cara a la presentación final y conclusiones, escogemos la misma cantidad de grupos para poder comparar y en coherencia con lo que nos dice la visualización del dataset. Este valor será **7**, el cual además iguala bastante los indicadores.
 
 En las predicciones podemos obeservar las siguientes curiosidades. 
@@ -820,15 +820,15 @@ Sin embargo, el indicador **Calinski-Harabasz** que relaciona la cohesión y sep
 
 Finalmente el índice **Davies Bouldin**, señala tanto al *Jerárquico* como al *Espectral* como los mejores agrupamientos, esto es debido a que se mide la proporción entre la suma de la dispersión dentro del clúster a la separación entre clústers, y por tanto apremia a resultados de agrupamiento en los que no tienen por qué ser similares los grupos entre si. Esto coincide con lo que nos dice nuestra intuición observando el conjunto de datos. 
 
-"""  #
+
 
 #%% md
 
-"""  #    
+
 # Conclusión
 Veamos los resultados de uno y otro análisis:
 
-"""  #
+
 
 
 #%%
@@ -856,9 +856,13 @@ display(simplificar_extrinsic())
 
 #%% md
 
-""" #    
+
 Se aprecia una diferencia sustancial entre los resultados según si se conoce o no el valor de la clase, muy homogéneos en caso de Silhouette y con una sola excepción (el Espectral) para la métrica de Calinski Harabasz.
 
 Sin embargo, la métrica Davis-Bouldin parece bastante independiente del hecho de que el dataset sea intrínseco o extrínseco.
 
-"""  #
+Para ambos conjuntos de datos el algoritmo jerárquico aglomerativo ha dado un buen resultado.
+
+En esta práctica vimos cómo es posible implementar distintos agrupamientos sobre el mismo conjunto de datos bidimensionales, y cómo estos algoritmos son capaces también de encontrar las semejanzas intrínsecas de los datos y producir clases que, en efecto, reproducen lo que puede observarse de manera intuitiva a partir de la gráfica de los datos.
+
+
