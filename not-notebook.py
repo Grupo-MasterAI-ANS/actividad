@@ -428,22 +428,27 @@ plot_dataset(extrinsic_dataset, extrinsic_classes)
 
 #%% md
 
+""" #    
 # Análisis dataset extrínseca
+
+Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
+     
+Definimos un variable con el número de cluster que usaremos para el análisis:
+"""  #
+
+#%%
+
+extrinsic_clusters = 3
+
+#%%
 ## Algoritmos
 
 #%% md
 
 ### Algoritmo 1: K medias
 
-""" #    
-Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
-
-"""  #
-
-#%%
 
 # Generamos el modelo.
-extrinsic_clusters = 3
 model = KMeans(n_clusters=extrinsic_clusters).fit(extrinsic_dataset)
 prediction = model.predict(extrinsic_dataset)
 
@@ -681,7 +686,7 @@ plot_dataset(intrinsic_dataset, prediction)
 #%% md
 
 """  #    
-Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han quedado a medias.
+Vemos que buena parte de los grupos se han identificado correctamente, o con mínimas interferencias (el grupo amarillo \"invade\" al azul oscuro en dos puntos). Sin embargo, los dos grupos pequeños de abajo a la izquierda los considera uno, junto con algunos puntos del grupo grande a su lado, que a su vez está dividido en dos.
 
 """  #
 
@@ -703,7 +708,7 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-AQUI TENDREMOS QUE COMENTAR ALGO
+El resultado de este algoritmo de agrupamiento es excelente, acertando completamente los 7 grupos que se adivinan visualmente.AQUI TENDREMOS QUE COMENTAR ALGO
 
 #%% md
 
@@ -751,7 +756,7 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
-AQUI TAMBIÉN TENDREMOS QUE COMENTAR ALGO
+Este algoritmo resuelve casi correctamente el agrupamiento, identificando los 7 grupos pero asignando mal algunos puntos, incluyendo en los grupos pequeños puntos de los grupos grandes más cercanos. Es un problema conocido del algoritmo, al trabajar sobre una media general para todos los agrupamientos.AQUI TAMBIÉN TENDREMOS QUE COMENTAR ALGO
 
 #%% md
 
@@ -838,11 +843,3 @@ Se aprecia una diferencia sustancial entre los resultados según si se conoce o 
 Sin embargo, la métrica Davis-Bouldin parece bastante independiente del hecho de que el dataset sea intrínseco o extrínseco.
 
 """  #
-
-#%%
-
-
-
-#%%
-
-
