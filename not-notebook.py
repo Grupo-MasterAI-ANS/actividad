@@ -16,17 +16,17 @@
 
 #%%
 
-import pandas as pd
-import seaborn as sns
-import numpy as np
 import itertools as it
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
-# Para las medidas extrínsecas
-from sklearn import metrics, datasets
-from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, MeanShift, SpectralClustering
-from sklearn.metrics import davies_bouldin_score, pairwise_distances
-from sklearn.metrics.cluster import contingency_matrix
+# Para las medidas y algoritmos.
+from sklearn import metrics
+from sklearn.cluster import KMeans, DBSCAN, MeanShift, SpectralClustering
+from sklearn.metrics import davies_bouldin_score
+from sklearn.mixture import GaussianMixture
 from scipy.cluster.hierarchy import linkage, cut_tree
 
 # Eliminamos avisos molestos
@@ -41,7 +41,7 @@ warnings.filterwarnings("ignore")
 #### Función de carga del dataset
 Preparamos una función genérica para para simplificar la descarga de los datasets y su preparación.     
 Ésta nos permite escoger los atributos que usaremos, así como extraer a un variable aparte las clases en caso de estar disponibles.
-Esta acepta varios parámetros:
+Descripción de sus parámetros:
  - dataset_url: cadena con la ruta al recurso desde donde cargar el dataset.
  - attributes: atributos del dataset a usar (pocisión y nombre).
  - separator (opcional): caracter de división en el origen del dataset.
@@ -245,6 +245,9 @@ Función que calcula varias medidas cualitativas del agrupamiento, de forma a po
  - Calinski-Harabasz
  - Davies-Bouldin
 
+ Para simplificar la comparación de resultados, se crea una media de algunos de los parámetros, que son compatibles por
+ puntuar con un máximo de 1. Nos basaremos en ella para considerar qué algoritmo ofrece mejor resultado.
+
 """  #
 
 
@@ -273,29 +276,56 @@ def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
 #%% md
 
 """  #    
-### Funciones de cálculo de medidas intrínsecas
-Añadimos las funciones de cálculo de métricas intrínsecas no disponibiles directamente en python o al menos en sklearn.
+Agrupamos en una función el cálculo de varias medidas cualitativas del agrupamiento.
+ - Silhouette
+ - Calinski-Harabasz
+ - Davies-Boudin
+
+Debido a que RMSSTD, R² y la Medida I requieren de centroides, que no todos los algoritmos utilizan, decidimos prescindir de ellas.
 
 """  #
 
 
 #%%
 
-def RMSSTD_score(dataset, prediction, centers):
-    # Extract all individual predicted classes.
-    labels = np.unique(prediction)
+def calculate_intrinsic_metrics(dataset, prediction):
+    return {
+        'Silhouette': metrics.silhouette_score(dataset, prediction),
+        'Calinski Harabasz': metrics.calinski_harabasz_score(dataset, prediction),
+        'Davies Bouldin': metrics.davies_bouldin_score(dataset, prediction)
+    }
 
-    numerator = np.sum([
-        np.sum(np.sum(dataset[prediction == label] - centers[label], axis=1) ** 2)
-        for label in labels
-    ])
 
-    denominator = dataset.shape[1] * np.sum([
-        np.sum(prediction == label) - 1
-        for label in labels
-    ])
+#%% md
 
-    return np.sqrt(numerator / denominator)
+""" #    
+### Función para presentar las métricas
+
+Finalmente se crea una función que simplifique la comparación de métricas entre distintos algoritmos.
+
+"""  #
+
+
+#%%
+
+def compare_metrics(metrics_data: dict) -> pd.DataFrame:
+    output = pd.DataFrame(metrics_data)
+    output.loc['mean'] = output.mean(axis=0)
+
+    return output
+
+
+#%% md
+
+""" #    
+Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de clusters, para poder
+escoger el número de clusters óptimo usando la técnica del codo.      
+
+Aplicamos la función de R cuadrado vista en clase al esta ser compatible con datasets intrísecos mientras que la disponible
+en sklearn requiere disponer de las clases reales.    
+Esta métrica nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
+
+"""  #
 
 
 #%%
@@ -315,82 +345,28 @@ def r2_score(dataset, prediction, centroids):
     return 1 - numerator / denominator
 
 
-#%%
+def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
+    dataset = np.array(dataset)
+    silhouette_values = []
+    r2_values = []
+    min_clusters = 2
 
-def distancia_euclidiana(x, y):
-    return np.sqrt(np.sum((x - y) ** 2))
+    for k in np.arange(min_clusters, max_clusters):
+        model = KMeans(n_clusters=k).fit(dataset)
+        prediction = model.predict(dataset)
+        centroids = model.cluster_centers_
 
+        silhouette_values += [metrics.silhouette_score(dataset, prediction)]
+        r2_values += [r2_score(dataset, prediction, centroids)]
 
-def distance_matrix(X, distancia):
-    mD = np.zeros((X.shape[0], X.shape[0]))
-    for pair in it.product(np.arange(X.shape[0]), repeat=2):
-        mD[pair] = distancia(X[pair[0], :], X[pair[1], :])
-    return mD
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    ax[0].plot(np.arange(min_clusters, max_clusters), silhouette_values, linestyle='-', marker='o')
+    ax[0].set_xlabel("Número de clústeres")
+    ax[0].set_ylabel("Medida de ancho de silueta")
 
-
-def medida_I(dataset, prediction, centers, distance_function, p=1):
-    attributes_mean = np.mean(dataset, axis=0)
-    labels = np.sort(np.unique(prediction))
-    distance_max = np.max(distance_matrix(centers, distance_function))
-
-    num = np.sum([distance_function(instance, attributes_mean) for instance in dataset.values])
-
-    den = len(labels) * np.sum([
-        np.sum([
-            distance_function(dataset.iloc[i], centers[k])
-            for i in np.arange(dataset.shape[0])[prediction == labels[k]]
-        ])
-        for k in np.arange(centers.shape[0])
-    ])
-
-    return (num / den * distance_max) ** p
-
-
-#%%
-
-
-
-#%% md
-
-"""  #    
-#### Función de cálculo de las medidas intrínsecas
-Función que calcula varias medidas cualitativas del agrupamiento.
- - Silhouette
- - Calinski-Harabasz
- - Davies-Boudin
-
-
-No usamos RMSSTD, R² y Medida I al estas nececitar centroides, pero no todos los algoritmos lo contemplan.
-
-"""  #
-
-
-#%%
-
-def calculate_intrinsic_metrics(dataset, prediction):
-    return {
-        'Silhouette': metrics.silhouette_score(dataset, prediction),
-        'Calinski Harabasz': metrics.calinski_harabasz_score(dataset, prediction),
-        'Davies Bouldin': metrics.davies_bouldin_score(dataset, prediction)
-    }
-
-
-#%% md
-
-""" #    
-### Presentación métricas
-Usaremos la función a continuación para presentar la comparación de las métricas, usando una media comparativa.
-
-"""  #
-
-
-#%%
-
-def compare_metrics(metrics_data: dict) -> pd.DataFrame:
-    output = pd.DataFrame(metrics_data)
-    output.loc['mean'] = output.mean(axis=0)
-
-    return output
+    ax[1].plot(np.arange(min_clusters, max_clusters), r2_values, linestyle='-', marker='o')
+    ax[1].set_xlabel("Número de clústeres")
+    ax[1].set_ylabel("Medida de R cuadrado")
 
 
 #%% md
@@ -511,75 +487,20 @@ plot_dataset(intrinsic_dataset)
 #%% md
 
 """  #    
-Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, y parece que se podría clasificar con 4, 5 o con 7 clusters.
+Observando las características de esta representación, podemos decir que es un conjunto de datos compacto, 
+lo que nos permitirá obtener resultados aceptables con con algoritmos de agrupamiento K-means y jerárquicos, 
+y parece que se podría clasificar con 4, 5 o con 7 clusters.
 
 """  #
 
 #%% md
 
 """  #    
-# Algoritmos
-Preparamos funciones 'herramienta' para cada algoritmo para poder analizarlos.
-
-"""  #
-
-#%% md
-
-## K-Means
-
-#%% md
-
-"""  #    
-Métrica R cadrado. No usamos directamente la de sklean al ésta necesitar la clases reales.
-Esta métrica nos permite valorar el ratio de distancia intraclúster con respecto a la distancia interclúster.
-
-"""  #
-
-#%% md
-
-"""  #    
-Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de cluters, de forma a escoger el número de clusters óptimo, usando la técnica del codo.
-
-"""  #
-
-
-#%%
-
-def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
-    dataset = np.array(dataset)
-    silhouette_values = []
-    r2_values = []
-    min_clusters = 2
-
-    for k in np.arange(min_clusters, max_clusters):
-        model = KMeans(n_clusters=k).fit(dataset)
-        prediction = model.predict(dataset)
-        centroids = model.cluster_centers_
-
-        silhouette_values += [metrics.silhouette_score(dataset, prediction)]
-        r2_values += [r2_score(dataset, prediction, centroids)]
-
-    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-    ax[0].plot(np.arange(min_clusters, max_clusters), silhouette_values, linestyle='-', marker='o')
-    ax[0].set_xlabel("Número de clústeres")
-    ax[0].set_ylabel("Medida de ancho de silueta")
-
-    ax[1].plot(np.arange(min_clusters, max_clusters), r2_values, linestyle='-', marker='o')
-    ax[1].set_xlabel("Número de clústeres")
-    ax[1].set_ylabel("Medida de R cuadrado")
-
-
-#%% md
-
 # Análisis dataset extrínseca
-
-#%% md
-
-"""  #    
-
 ### Selección del número de clusters
 
-A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
+A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a 
+partir del Método del Codo.
 
 """  #
 
@@ -590,38 +511,35 @@ plot_clusters_selection(extrinsic_dataset)
 #%% md
 
 """  #    
-Observando los datos es evidente que el número óptimo de clústers para K-means es 3.
+Observando los datos es evidente que el número óptimo de clústers para K-means es 3.    
+Definimos un variable con el número de cluster que usaremos para el análisis.
 
 """  #
 
 #%%
 
-extrinsic_clusters = 4
+extrinsic_clusters = 3
 
 #%% md
 
-## Algoritmos
 ### Algoritmo 1: K medias
+
 
 #%%
 
+# Generamos el modelo.
 model = KMeans(n_clusters=extrinsic_clusters).fit(extrinsic_dataset)
 prediction = model.predict(extrinsic_dataset)
+
+# Guardamos la métricas.
 extrinsic_metrics['k-means'] = calculate_extrinsic_metrics(extrinsic_dataset, extrinsic_classes, prediction)
 
+# Presentamos los clusters.
 plot_dataset(extrinsic_dataset, prediction)
 
 #%% md
 
-"""  #     
-por corregir: k-means no ha sido capaz de encontrar el pequeño grupo
-
-"""  #
-
-#%% md
-
-### Algoritmo 2: jerárquico aglomerativo
-#### Ejecución del algoritmo
+### ### Algoritmo 2: jerárquico aglomerativo
 
 #%%
 
@@ -633,13 +551,6 @@ extrinsic_metrics['Jerárquico'] = calculate_extrinsic_metrics(extrinsic_dataset
 
 # Presentamos los clusters.
 plot_dataset(extrinsic_dataset, prediction)
-
-#%% md
-
-""" #    
-tampoco ha cojido el pequeño grupo
-
-"""  #
 
 
 #%% md
@@ -747,7 +658,9 @@ display(compare_metrics(extrinsic_metrics))
 #%% md
 
 """  #    
-Como se puede observar a continuación, si comparamos una media de las medidas calculadas, el algoritmo que mejor agrupa nuestros datos es K-medias.
+Por lo que se observa, basándonos en la media calculada, que el <b>mejor algoritmo para el agrupamiento de nuestros 
+datos es K-means</b>, con poca diferencia respecto al agrupamiento jerárquico escogido y seguidos de cerca por 
+desplazamiento de medias.
 
 """  #
 
@@ -775,7 +688,13 @@ plot_clusters_selection(intrinsic_dataset)
 """  #    
 Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters. Aunque estos valores son para escoger la cantidad óptima de centroides, son los valores sobre los que hemos realizado el análisis de todos los algoritmos utilizados.
 
+Usamos un variable con el número buscado de clusters:
+
 """  #
+
+#%%
+
+intrinsic_clusters = 7
 
 #%% md
 
@@ -783,13 +702,12 @@ Según el procedimiento del codo, escogeríamos entre 5 y 7 clusters. Aunque est
 #### Ejecución del algoritmo
 Durante el análisis ejecutamos la predicción de k-means con 5, 6 y 7 clusters, y finalmente ejecutamos y visualizamos la agrupación generada para K = 7.
 
-
 """  #
 
 #%%
 
 # Generamos el modelo.
-model = KMeans(n_clusters=7).fit(intrinsic_dataset)
+model = KMeans(n_clusters=intrinsic_clusters).fit(intrinsic_dataset)
 prediction = model.predict(intrinsic_dataset)
 
 # Guardamos la métricas.
@@ -811,10 +729,14 @@ Vemos que mientras se han logrado aislar algunos grupos, otros claramente se han
 
 #%%
 
+# Generamos el modelo.
 model = linkage(intrinsic_dataset, 'average')
-prediction = cut_tree(model, n_clusters=7).flatten()
+prediction = cut_tree(model, n_clusters=intrinsic_clusters).flatten()
+
+# Guardamos la métricas.
 intrinsic_metrics['Jerárquico'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
 
+# Presentamos los clusters.
 plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
@@ -823,21 +745,24 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%%
 
-K = 7
+# Generamos el modelo.
 knn = 34
 model = SpectralClustering(
-    n_clusters=K, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
+    n_clusters=intrinsic_clusters, affinity='nearest_neighbors', n_neighbors=knn, random_state=0
 ).fit(intrinsic_dataset)
 prediction = model.labels_
+
+# Guardamos la métricas.
 intrinsic_metrics['Espectral'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
 
+# Presentamos los clusters.
 plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
 """  #    
-El jerarquico con 30 KNN resuelve bien la clusterización con 7 grupos, si se reduce no lo hace tan bien, y  partir de 50 tampoco. Hay que encontar el valor correcto.    
-Buscando 5 clusters tambien lo hace bien.
+El jerárquico con 30 KNN resuelve bien la clusterización con 7 grupos, si se reduce no lo hace tan bien, y  partir de 50 tampoco. Hay que encontar el valor correcto.    
+Buscando 5 clusters también lo hace bien.
 
 """  #
 
@@ -847,11 +772,15 @@ Buscando 5 clusters tambien lo hace bien.
 
 #%%
 
+# Generamos el modelo.
 h = 4
 model = MeanShift(bandwidth=h).fit(intrinsic_dataset)
 prediction = model.labels_
+
+# Guardamos la métricas.
 intrinsic_metrics['Means-Shift'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
 
+# Presentamos los clusters.
 plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
@@ -860,18 +789,20 @@ plot_dataset(intrinsic_dataset, prediction)
 
 #%%
 
-from sklearn.mixture import GaussianMixture
-
-model = GaussianMixture(n_components=7, max_iter=1000).fit(intrinsic_dataset)
+# Generamos el modelo.
+model = GaussianMixture(n_components=intrinsic_clusters, max_iter=1000).fit(intrinsic_dataset)
 prediction = model.predict(intrinsic_dataset)
+
+# Guardamos la métricas.
 intrinsic_metrics['EM'] = calculate_intrinsic_metrics(intrinsic_dataset, prediction)
 
+# Presentamos los clusters.
 plot_dataset(intrinsic_dataset, prediction)
 
 #%% md
 
 """  #    
-Este a veces la clava y a veces no. Hay que darle varias veces. Es curioso.
+Este algoritmo tiene una gran variabilidad, resultando óptimo en ocasiones y alejándose de ese resultado en otras.
 
 """  #
 
@@ -915,4 +846,4 @@ En este trabajo hemos utilizado dos conjunto de datos con características difer
 
 Podremos por tanto concluir...
 
-""" #
+"""  #
