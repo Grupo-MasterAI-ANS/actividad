@@ -40,7 +40,8 @@ warnings.filterwarnings("ignore")
 ### Funciones de apoyo
 #### Función de carga del dataset
 Preparamos una función genérica para para simplificar la descarga de los datasets y su preparación.     
-Ésta nos permite escoger los atributos que usaremos, así como extraer a un variable aparte las clases en caso de estar disponibles.
+Ésta nos permite escoger los atributos que usaremos, así como extraer a una variable las clases reales del dataset en caso de estar disponibles.    
+
 Descripción de sus parámetros:
  - dataset_url: cadena con la ruta al recurso desde donde cargar el dataset.
  - attributes: atributos del dataset a usar (pocisión y nombre).
@@ -152,6 +153,7 @@ def plot_dataset(dataset: pd.DataFrame, classes: np.array = None) -> None:
 """  #    
 ## Métricas
 ### Funciones de cálculo de medidas extrínsecas
+Además usar métricas de evaluación disponibles en python, aplicaremos también funciones de métricas customizadas vistas en clase, definadas a continuación:
 
 """  #
 
@@ -234,7 +236,9 @@ def medida_entropia(mat):
 
 """  #     
 #### Función de cálculo de las medidas extrínsecas
-Función que calcula varias medidas cualitativas del agrupamiento, de forma a poder comparar cada algoritmo.
+Con la intensión de simplificar y unificar la captura de las métricas de valoración aplicadas a cada algoritmo, preparamos una función que calcula varias medidas cualitativas del agrupamiento, de forma a poder compararlas.    
+
+Ésta aplica las siguiente métricas:
  - Error, pureza, entropía, información mutua y F1 tal como se han visto en clase.
  - ARI mide la similaridad entre las clases y los predichos
  - Homogeneidad (todos los valores predichos son del clúster correcto)
@@ -276,7 +280,8 @@ def calculate_extrinsic_metrics(dataset, real_classes, predicted_classes):
 #%% md
 
 """  #    
-Agrupamos en una función el cálculo de varias medidas cualitativas del agrupamiento.
+### Funciones de cálculo de medidas intrínsecas
+En el caso de la evalución cualitativa del agrupamiento de los algoritmos intrínsecas, usaremos exclusivamente métricas disponibles en sklearn:
  - Silhouette
  - Calinski-Harabasz
  - Davies-Boudin
@@ -318,8 +323,8 @@ def compare_metrics(metrics_data: dict) -> pd.DataFrame:
 #%% md
 
 """ #    
-Función para generar gráficamente la evolución de las métricas R² y Silueta según el número de clusters, para poder
-escoger el número de clusters óptimo usando la técnica del codo.      
+### Función de selcción de número de clusters
+Para poder escoger el número optimode clusters preparamos una función que presentra gráficamente la evolución de las métricas R² y Silueta según el número de clusters, y poder escoger así el número óptimo de clusters usando la técnica del codo.      
 
 Aplicamos la función de R cuadrado vista en clase al esta ser compatible con datasets intrísecos mientras que la disponible
 en sklearn requiere disponer de las clases reales.    
@@ -344,6 +349,8 @@ def r2_score(dataset, prediction, centroids):
 
     return 1 - numerator / denominator
 
+
+#%%
 
 def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
     dataset = np.array(dataset)
@@ -371,7 +378,7 @@ def plot_clusters_selection(dataset: pd.DataFrame, max_clusters: int = 10):
 
 #%% md
 
-## Selección
+## Selección de los datasets
 
 #%% md
 
@@ -381,18 +388,18 @@ El origen de este dataset se remonta a datos usados en 1983 por la <i>American S
 
  El dataset consta de:
  - 392 instancias
- - 8 atributos, que son:    
-     · mpg (millas por galón de combustible): de tipo continuo.    
-     · cylinders (cilindros): discreto multi evaluado.    
-     · displacement (cilindrada): continuo.    
-     · horsepower (caballos de potencia): continuo.    
-     · weight (peso): continuo    
-     · acceleration (aceleración): continuo    
-     · model-year (año del modelo): discrto multi evaluado.    
-     · origin (origen): discreto multi evaluado.    
-     · car name (nombre del coche): cadena (único para cada instancia)    
+ - 8 atributos:    
+     - mpg (millas por galón de combustible): de tipo continuo.    
+     - cylinders (cilindros): discreto multi evaluado.    
+     - displacement (cilindrada): continuo.    
+     - horsepower (caballos de potencia): continuo.    
+     - weight (peso): continuo    
+     - acceleration (aceleración): continuo    
+     - model-year (año del modelo): discrto multi evaluado.    
+     - origin (origen): discreto multi evaluado.    
+     - car name (nombre del coche): cadena (único para cada instancia)    
 
-Para el estudio que nos ocupa vamos a predecir el número de cilindros basándonos en la cilindrada y la potencia.
+Para el estudio que nos ocupa vamos a intentar **predecir el número de cilindros** basándonos en la cilindrada y la potencia.
 
 """  #
 
@@ -421,7 +428,7 @@ print(extrinsic_dataset.isnull().any())
 #%% md
 
 """ #    
-Sin embargo, en la potencia hay un valor anómalo, un "?" usado donde se desconocía el dato, por lo que se ha incorporado a la función de carga de datos un filtro para eliminarlo, ajustable por parámetro (limpiarNA)
+Sin embargo, en la potencia existe un valor anómalo, un "?" usado donde se desconocía el dato, por lo que se ha incorporado a la función de carga de datos un filtro para eliminarlo.
 
 Vamos a observar la distribución de nuestra clase:
 
@@ -436,12 +443,8 @@ sns.distplot(extrinsic_classes)
 """ #    
 Se observa una marcada preponderancia de los valores de cilindros 4,6 y 8. Asumimos que probablemente las instancias que no pertenezcan a estos tres grupos se agrupen dentro de ellos lo que va a conllevar un pequeño error de base al escoger agrupamientos.
 
-"""  #
-
-#%% md
-
-""" #    
 Y la relación entre los atributos:
+
 
 """  #
 
@@ -456,7 +459,7 @@ plot_dataset(extrinsic_dataset, extrinsic_classes)
 El dataset intrínseca **Aggregations** está generado de manera artificial por: *A. Gionis, H. Mannila, and P. Tsaparas, Clustering aggregation. ACM Transactions on Knowledge Discovery from Data (TKDD), 2007*
 
 
-Este dataset está compuesto por 788 observaciones de 2 variables que abarcan un amplio rango numérico. En el conjunto de datos existen entre 5 a 7 grupos que se distribuyen en zonas particulares del rango de valores de las variables.
+Este dataset está compuesto por 788 observaciones de 2 variables que abarcan un amplio rango numérico.
 
 
 Cargamos nuestro dataset (*intrinsic_dataset*):
@@ -476,7 +479,7 @@ intrinsic_metrics = {}
 #%% md
 
 """  #    
-Visualizamos el dataset en 2-D.
+Visualizamos el dataset:
 
 """  #
 
@@ -511,8 +514,9 @@ plot_clusters_selection(extrinsic_dataset)
 #%% md
 
 """  #    
-Observando los datos es evidente que el número óptimo de clústers para K-means es 3.    
-Definimos un variable con el número de cluster que usaremos para el análisis.
+Observando las gráficas anteriores destaca como número de clusters el 3, aunque posiblement 5 clusters igualemente.    
+Optamos por un número óptimo de clústers para K-means de 3 para este dataset.    
+Definimos un variable con el número de cluster que usaremos para el análisis:
 
 """  #
 
