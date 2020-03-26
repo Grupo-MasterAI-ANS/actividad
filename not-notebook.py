@@ -226,7 +226,7 @@ def medida_entropia(mat):
 #%% md
 
 """  #     
-#### Función de agrupación de las medidas extrínsecas
+#### Función de cálculo de las medidas extrínsecas
 Con la intensión de simplificar y unificar la captura de las métricas de valoración aplicadas a cada algoritmo, preparamos una función que calcula varias medidas cualitativas del agrupamiento, de forma a poder compararlas.    
 
 Ésta aplica las siguiente métricas:
@@ -649,7 +649,7 @@ y parece que se podría clasificar con 4, 5 o con 7 clusters.
 #%% md
 
 """  #    
-### Selección número de clusters
+### Selección del número de clusters
 
 A fin de implementar el modelo de K-Medios, comencemos por determinar la cantidad óptima de centroides a utilizar a partir del Método del Codo.
 
@@ -792,8 +792,7 @@ plot_dataset(intrinsic_dataset, prediction)
 
 """  #    
 Este algoritmo tiene una gran variabilidad, resultando óptimo en ocasiones y alejándose de ese resultado en otras.     
-Hemos dejado fijado el *random state* de forma a vizualizar un caso de agrupación perfecta, aunque en la mayoría de los casos no logra estaagrupación.
-
+Hemos dejado fijado el *random state* de tal forma que visualicemos un caso de agrupación perfecta, aunque en la mayoría de los casos no logra este nivel de agrupación.
 """  #
 
 #%% md
